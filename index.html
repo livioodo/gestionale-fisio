@@ -25,7 +25,7 @@
         @media print {
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             body::before { content: attr(data-print-title); position: fixed; top: 0; left: 0; width: 100%; text-align: center; font-size: 16pt; font-weight: bold; padding-top: 10mm; padding-bottom: 10mm; }
-            header, #patientSidebar, #addPatientBtn, #prevWeekBtn, #nextWeekBtn, #todayBtn, #printWeekBtn, #patientModal, #appointmentModal, #confirmActionModal, #confirmRecurrenceModal, #togglePatientListBtn { display: none !important; }
+            header, #patientSidebar, #addPatientBtn, #prevWeekBtn, #nextWeekBtn, #todayBtn, #printWeekBtn, #patientModal, #appointmentModal, #confirmActionModal, #confirmRecurrenceModal, #togglePatientListBtn, #conflictModal { display: none !important; }
             .container { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
             .main-content { width: 100% !important; }
             #calendar-wrapper { overflow: visible !important; margin-top: 40px; }
@@ -91,10 +91,11 @@
     </div>
     
     <div id="patientModal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop"><div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md m-4 overflow-y-auto max-h-[90vh]"><div class="flex justify-between items-center mb-6"><h2 id="patientModalTitle" class="text-2xl font-bold"></h2><button type="button" id="deletePatientBtn" class="text-red-500 hover:text-red-700 hidden" title="Elimina Paziente"><i class="fas fa-trash-alt fa-lg"></i></button></div><form id="patientForm"><input type="hidden" id="patientId"><div class="space-y-4"><input id="patientName" type="text" placeholder="Nome" class="w-full px-4 py-2 border rounded-lg" required><input id="patientSurname" type="text" placeholder="Cognome" class="w-full px-4 py-2 border rounded-lg" required><input id="patientPhone" type="tel" placeholder="Telefono" class="w-full px-4 py-2 border rounded-lg"><textarea id="patientAddress" placeholder="Indirizzo" rows="2" class="w-full px-4 py-2 border rounded-lg"></textarea><div><label for="patientDefaultPrice" class="block text-sm font-medium text-gray-700 mb-1">Prezzo Predefinito (€)</label><input id="patientDefaultPrice" type="number" step="0.01" placeholder="Es. 50.00" class="w-full px-4 py-2 border rounded-lg"></div><textarea id="patientNotes" placeholder="Note cliniche..." rows="3" class="w-full px-4 py-2 border rounded-lg"></textarea></div><div class="flex flex-wrap justify-end mt-6 gap-3"><button type="button" id="addAppointmentFromPatientBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg hidden"><i class="fas fa-calendar-plus mr-2"></i>Crea App.</button><button type="button" id="cancelPatientBtn" class="bg-gray-300 hover:bg-gray-400 font-bold py-2 px-4 rounded-lg">Annulla</button><button type="submit" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg">Salva</button></div></form></div></div>
-    <div id="appointmentModal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop"><div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-lg m-4 overflow-y-auto max-h-[90vh]"><h2 id="appointmentModalTitle" class="text-2xl font-bold mb-4"></h2><div id="conflictError" class="hidden bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert"><p class="font-bold">Conflitto Rilevato</p><p>L'orario si sovrappone con un altro appuntamento.</p></div><form id="appointmentForm"><input type="hidden" id="appointmentId"><input type="hidden" id="originalAppointmentData"><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label for="appointmentPatient" class="block text-sm font-medium text-gray-700">Paziente</label><select id="appointmentPatient" class="w-full mt-1 px-4 py-2 border rounded-lg" required></select></div><div><label for="appointmentPrice" class="block text-sm font-medium text-gray-700">Prezzo (€)</label><input id="appointmentPrice" type="number" step="0.01" placeholder="Es. 50.00" class="w-full mt-1 px-4 py-2 border rounded-lg" required></div><div><label for="appointmentDate" class="block text-sm font-medium text-gray-700">Data</label><input id="appointmentDate" type="date" class="w-full mt-1 px-4 py-2 border rounded-lg" required></div><div class="grid grid-cols-2 gap-2"><div><label for="appointmentTime" class="block text-sm font-medium text-gray-700">Orario</label><input id="appointmentTime" type="time" step="900" class="w-full mt-1 px-4 py-2 border rounded-lg" required></div><div><label for="appointmentDuration" class="block text-sm font-medium text-gray-700">Durata (min)</label><input id="appointmentDuration" type="number" min="15" step="15" value="60" class="w-full mt-1 px-4 py-2 border rounded-lg" required></div></div></div><div class="mt-4"><textarea id="appointmentNotes" placeholder="Note sulla seduta..." rows="2" class="w-full px-4 py-2 border rounded-lg"></textarea></div><div class="mt-4 p-3 bg-gray-50 rounded-lg"><label class="flex items-center space-x-3 cursor-pointer"><input type="checkbox" id="isRecurring" class="h-5 w-5 rounded text-teal-600 focus:ring-teal-500"><span class="font-medium">Appuntamento Ricorrente</span></label><div id="recurringOptions" class="hidden mt-3 space-y-3"><div class="flex items-center space-x-2 sm:space-x-4"><label class="text-sm">Ripeti:</label><div id="weekdays" class="flex flex-wrap gap-1"><label class="p-2 border rounded-full text-xs cursor-pointer"><input type="checkbox" data-day="1" class="hidden"> L</label><label class="p-2 border rounded-full text-xs cursor-pointer"><input type="checkbox" data-day="2" class="hidden"> M</label><label class="p-2 border rounded-full text-xs cursor-pointer"><input type="checkbox" data-day="3" class="hidden"> M</label><label class="p-2 border rounded-full text-xs cursor-pointer"><input type="checkbox" data-day="4" class="hidden"> G</label><label class="p-2 border rounded-full text-xs cursor-pointer"><input type="checkbox" data-day="5" class="hidden"> V</label><label class="p-2 border rounded-full text-xs cursor-pointer"><input type="checkbox" data-day="6" class="hidden"> S</label><label class="p-2 border rounded-full text-xs cursor-pointer"><input type="checkbox" data-day="0" class="hidden"> D</label></div></div><div><label for="recurringEndDate" class="text-sm font-medium text-gray-700">Ripeti fino al:</label><input id="recurringEndDate" type="date" class="w-full mt-1 px-4 py-2 border rounded-lg"></div></div></div><div class="flex flex-wrap justify-end mt-6 gap-3"><button type="button" id="cancelAppointmentBtn" class="bg-gray-300 hover:bg-gray-400 font-bold py-2 px-4 rounded-lg">Annulla</button><button type="button" id="deleteAppointmentBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg hidden">Elimina</button><button type="submit" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg">Salva</button></div></form></div></div>
+    <div id="appointmentModal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop"><div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-lg m-4 overflow-y-auto max-h-[90vh]"><h2 id="appointmentModalTitle" class="text-2xl font-bold mb-4"></h2><form id="appointmentForm"><input type="hidden" id="appointmentId"><input type="hidden" id="originalAppointmentData"><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label for="appointmentPatient" class="block text-sm font-medium text-gray-700">Paziente</label><select id="appointmentPatient" class="w-full mt-1 px-4 py-2 border rounded-lg" required></select></div><div><label for="appointmentPrice" class="block text-sm font-medium text-gray-700">Prezzo (€)</label><input id="appointmentPrice" type="number" step="0.01" placeholder="Es. 50.00" class="w-full mt-1 px-4 py-2 border rounded-lg" required></div><div><label for="appointmentDate" class="block text-sm font-medium text-gray-700">Data</label><input id="appointmentDate" type="date" class="w-full mt-1 px-4 py-2 border rounded-lg" required></div><div class="grid grid-cols-2 gap-2"><div><label for="appointmentTime" class="block text-sm font-medium text-gray-700">Orario</label><input id="appointmentTime" type="time" step="900" class="w-full mt-1 px-4 py-2 border rounded-lg" required></div><div><label for="appointmentDuration" class="block text-sm font-medium text-gray-700">Durata (min)</label><input id="appointmentDuration" type="number" min="15" step="15" value="60" class="w-full mt-1 px-4 py-2 border rounded-lg" required></div></div></div><div class="mt-4"><textarea id="appointmentNotes" placeholder="Note sulla seduta..." rows="2" class="w-full px-4 py-2 border rounded-lg"></textarea></div><div class="mt-4 p-3 bg-gray-50 rounded-lg"><label class="flex items-center space-x-3 cursor-pointer"><input type="checkbox" id="isRecurring" class="h-5 w-5 rounded text-teal-600 focus:ring-teal-500"><span class="font-medium">Appuntamento Ricorrente</span></label><div id="recurringOptions" class="hidden mt-3 space-y-3"><div class="flex items-center space-x-2 sm:space-x-4"><label class="text-sm">Ripeti:</label><div id="weekdays" class="flex flex-wrap gap-1"><label class="p-2 border rounded-full text-xs cursor-pointer"><input type="checkbox" data-day="1" class="hidden"> L</label><label class="p-2 border rounded-full text-xs cursor-pointer"><input type="checkbox" data-day="2" class="hidden"> M</label><label class="p-2 border rounded-full text-xs cursor-pointer"><input type="checkbox" data-day="3" class="hidden"> M</label><label class="p-2 border rounded-full text-xs cursor-pointer"><input type="checkbox" data-day="4" class="hidden"> G</label><label class="p-2 border rounded-full text-xs cursor-pointer"><input type="checkbox" data-day="5" class="hidden"> V</label><label class="p-2 border rounded-full text-xs cursor-pointer"><input type="checkbox" data-day="6" class="hidden"> S</label><label class="p-2 border rounded-full text-xs cursor-pointer"><input type="checkbox" data-day="0" class="hidden"> D</label></div></div><div><label for="recurringEndDate" class="text-sm font-medium text-gray-700">Ripeti fino al:</label><input id="recurringEndDate" type="date" class="w-full mt-1 px-4 py-2 border rounded-lg"></div></div></div><div class="flex flex-wrap justify-end mt-6 gap-3"><button type="button" id="cancelAppointmentBtn" class="bg-gray-300 hover:bg-gray-400 font-bold py-2 px-4 rounded-lg">Annulla</button><button type="button" id="deleteAppointmentBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg hidden">Elimina</button><button type="submit" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg">Salva</button></div></form></div></div>
     <div id="confirmActionModal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop"><div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md m-4 text-center"><h2 id="confirmActionTitle" class="text-xl font-bold mb-4"></h2><p id="confirmActionMessage" class="mb-6"></p><div class="flex justify-end space-x-4"><button id="confirmActionCancel" class="bg-gray-300 hover:bg-gray-400 font-bold py-2 px-4 rounded-lg">Annulla</button><button id="confirmActionOk" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">Conferma</button></div></div></div>
     <div id="confirmRecurrenceModal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop"><div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md m-4 text-center"><h2 id="confirmRecurrenceTitle" class="text-xl font-bold mb-4"></h2><p id="confirmRecurrenceMessage" class="mb-6"></p><div class="flex flex-col space-y-3"><button id="confirmRecurrenceSingle" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg"></button><button id="confirmRecurrenceAll" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 px-4 rounded-lg"></button><button id="confirmRecurrenceCancel" class="w-full mt-4 bg-gray-300 hover:bg-gray-400 font-bold py-3 px-4 rounded-lg">Annulla</button></div></div></div>
-    
+    <div id="conflictModal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop"><div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md m-4 text-center"><h2 class="text-xl font-bold mb-4 text-red-600">Conflitto di Orario</h2><p id="conflictMessage" class="mb-6"></p><div class="flex flex-col space-y-3"><button id="conflictDeleteAndSaveBtn" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg">Elimina Esistente e Salva Nuovo</button><button id="conflictCancelBtn" class="w-full bg-gray-300 hover:bg-gray-400 font-bold py-2 px-4 rounded-lg">Annulla</button></div></div></div>
+
     <script type="module">
         const LOCAL_STORAGE_KEY = 'fisioterapia-gestionale-data';
         let state = { patients: [], appointments: [] };
@@ -110,6 +111,7 @@
                 appointmentModal: document.getElementById('appointmentModal'),
                 confirmRecurrenceModal: document.getElementById('confirmRecurrenceModal'),
                 confirmActionModal: document.getElementById('confirmActionModal'),
+                conflictModal: document.getElementById('conflictModal'),
                 patientForm: document.getElementById('patientForm'),
                 appointmentForm: document.getElementById('appointmentForm'),
                 patientIdInput: document.getElementById('patientId'),
@@ -129,7 +131,6 @@
                 appointmentTimeInput: document.getElementById('appointmentTime'),
                 appointmentDurationInput: document.getElementById('appointmentDuration'),
                 appointmentNotesInput: document.getElementById('appointmentNotes'),
-                conflictError: document.getElementById('conflictError'),
                 deleteAppointmentBtn: document.getElementById('deleteAppointmentBtn'),
                 deletePatientBtn: document.getElementById('deletePatientBtn'),
                 printWeekBtn: document.getElementById('printWeekBtn'),
@@ -305,7 +306,6 @@
         function openAppointmentModal(appointmentOrEvent, preselectedPatient = null) {
             ui.appointmentForm.reset();
             ui.appointmentDurationInput.value = '60';
-            ui.conflictError.classList.add('hidden');
             ui.deleteAppointmentBtn.classList.add('hidden');
             ui.recurringOptions.classList.add('hidden');
             ui.isRecurringCheckbox.checked = false;
@@ -360,6 +360,12 @@
                 alert('Paziente, prezzo, data e ora sono obbligatori.'); return;
             }
 
+            const conflictingAppointment = await checkConflict(appointmentData, appointmentId);
+            if (conflictingAppointment) {
+                showConflictModal(conflictingAppointment, appointmentData);
+                return;
+            }
+
             if (appointmentId) {
                 const originalAppointmentData = JSON.parse(ui.originalAppointmentDataInput.value);
                 
@@ -369,19 +375,17 @@
                     if (action === 'cancel') return;
                     
                     if (action === 'single') {
-                        if (await checkConflict(appointmentData, appointmentId)) { ui.conflictError.classList.remove('hidden'); return; }
                         state.appointments = state.appointments.map(a => a.id === appointmentId ? { ...a, ...appointmentData } : a);
                     } else if (action === 'all') {
                         if (!(await updateFutureRecurring(originalAppointmentData, appointmentData))) return;
                     }
                 } else if(ui.isRecurringCheckbox.checked) { // Converting a SINGLE appointment to RECURRING
                     const newSeries = await generateRecurringAppointments(appointmentData, appointmentId);
-                    if (!newSeries) return; // Conflict check failed
+                    if (!newSeries) return;
                     state.appointments = state.appointments.filter(a => a.id !== appointmentId);
                     state.appointments.push(...newSeries);
                 }
                 else { // Editing a SINGLE appointment (and keeping it single)
-                    if (await checkConflict(appointmentData, appointmentId)) { ui.conflictError.classList.remove('hidden'); return; }
                     state.appointments = state.appointments.map(a => a.id === appointmentId ? { ...appointmentData, id: a.id } : a);
                 }
             } else { // Creating a NEW appointment
@@ -390,7 +394,6 @@
                     if(!newSeries) return;
                     state.appointments.push(...newSeries);
                 } else {
-                    if (await checkConflict(appointmentData)) { ui.conflictError.classList.remove('hidden'); return; }
                     appointmentData.id = crypto.randomUUID();
                     state.appointments.push(appointmentData);
                 }
@@ -443,8 +446,7 @@
             
             for (const app of appointmentsToAdd) {
                 if (await checkConflict(app, ignoreId)) {
-                    ui.conflictError.classList.remove('hidden');
-                    alert(`Conflitto rilevato durante la creazione della serie: ${app.date} ${app.time}.`); 
+                    showConflictModal(await checkConflict(app, ignoreId), app);
                     return null;
                 }
             }
@@ -483,8 +485,7 @@
             for(const app of updatedFutureAppointments) {
                 const otherAppsForCheck = [...otherAppointments, ...updatedFutureAppointments.filter(a => a.id !== app.id)];
                 if (await checkConflict(app, app.id, otherAppsForCheck)) {
-                    ui.conflictError.classList.remove('hidden');
-                    alert(`Conflitto aggiornando la serie: ${app.date} ${app.time}. L'operazione è stata annullata.`);
+                    showConflictModal(await checkConflict(app, app.id, otherAppsForCheck), app);
                     return false;
                 }
             }
@@ -508,9 +509,34 @@
                 const [existingStartH, existingStartM] = existingApp.time.split(':').map(Number);
                 const existingStartTime = existingStartH * 60 + existingStartM;
                 const existingEndTime = existingStartTime + (parseInt(existingApp.duration) || 60);
-                if (startTime < existingEndTime && endTime > existingStartTime) return true;
+                if (startTime < existingEndTime && endTime > existingStartTime) return existingApp;
             }
-            return false;
+            return null;
+        }
+
+        function showConflictModal(conflictingApp, newAppData) {
+            const conflictMessage = document.getElementById('conflictMessage');
+            conflictMessage.textContent = `Questo orario è già occupato dall'appuntamento con ${conflictingApp.patientName} alle ${conflictingApp.time}.`;
+            ui.conflictModal.style.display = 'flex';
+
+            const deleteAndSaveBtn = document.getElementById('conflictDeleteAndSaveBtn');
+            const cancelBtn = document.getElementById('conflictCancelBtn');
+
+            deleteAndSaveBtn.onclick = () => {
+                // Delete conflicting appointment
+                state.appointments = state.appointments.filter(a => a.id !== conflictingApp.id);
+                // Add new appointment
+                newAppData.id = newAppData.id || crypto.randomUUID();
+                state.appointments.push(newAppData);
+                
+                saveState();
+                refreshUI();
+                closeAppointmentModal();
+                ui.conflictModal.style.display = 'none';
+            };
+            cancelBtn.onclick = () => {
+                ui.conflictModal.style.display = 'none';
+            };
         }
 
         async function confirmAction(title, message) {
@@ -519,31 +545,19 @@
             ui.confirmActionModal.style.display = 'flex';
             
             return new Promise((resolve) => {
-                document.getElementById('confirmActionOk').onclick = () => {
-                    ui.confirmActionModal.style.display = 'none';
-                    resolve(true);
-                };
-                document.getElementById('confirmActionCancel').onclick = () => {
-                    ui.confirmActionModal.style.display = 'none';
-                    resolve(false);
-                };
+                document.getElementById('confirmActionOk').onclick = () => { ui.confirmActionModal.style.display = 'none'; resolve(true); };
+                document.getElementById('confirmActionCancel').onclick = () => { ui.confirmActionModal.style.display = 'none'; resolve(false); };
             });
         }
         
         async function handleDeletePatient() {
             const patientId = ui.patientIdInput.value;
             if (!patientId) return;
-
             const patient = state.patients.find(p => p.id === patientId);
-            const confirmed = await confirmAction(
-                'Conferma Eliminazione Paziente', 
-                `Sei sicuro di voler eliminare ${patient.name} ${patient.surname}? Questa azione è permanente e cancellerà anche tutti i suoi appuntamenti.`
-            );
-
+            const confirmed = await confirmAction('Conferma Eliminazione Paziente', `Sei sicuro di voler eliminare ${patient.name} ${patient.surname}? Questa azione è permanente e cancellerà anche tutti i suoi appuntamenti.`);
             if (confirmed) {
                 state.patients = state.patients.filter(p => p.id !== patientId);
                 state.appointments = state.appointments.filter(app => app.patientId !== patientId);
-                
                 saveState();
                 refreshUI();
                 closePatientModal();
