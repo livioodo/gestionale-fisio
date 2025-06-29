@@ -260,23 +260,32 @@
         // #############################################################################
         // ### CONFIGURAZIONE - INCOLLA QUI LE TUE CHIAVI                           ###
         // #############################################################################
-        const API_KEY = 'AIzaSyCyrvErd34wK8ryRN_7Ni4HHeHGsCUP-rI'
-        const CLIENT_ID = '999092828800-342l4shrm85f00bdigvn8q78rkufh7fh.apps.googleusercontent.com'
+        const API_KEY = 'AIzaSyDzAzRi-MVwCX8e1-a4b-ag9KfZdZsBfWI'; 
+        const CLIENT_ID = '999092828800-342l4shrm85f00bdigvn8q78rkufh7fh.apps.googleusercontent.com';
         // #############################################################################
-
         const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
         const SCOPES = 'https://www.googleapis.com/auth/drive.file';
         const DRIVE_FILENAME = 'gestionale-fisioterapia-data.json';
-        const LOCAL_STORAGE_KEY = 'fisioterapia-gestionale-data-local';
+        const LOCAL_STORAGE_KEY = 'spese-famiglia-data-local';
 
+        const EXPENSE_CATEGORIES = [
+            { name: "Spesa Supermercato", color: "#36A2EB" },
+            { name: "Elisa", color: "#FF6384" },
+            { name: "Matteo", color: "#FFCE56" },
+            { name: "Igiene casa", color: "#4BC0C0" },
+            { name: "Regali", color: "#9966FF" },
+            { name: "Aurelia", color: "#FF9F40" },
+            { name: "Altro", color: "#C9CBCF" }
+        ];
+        
         let tokenClient;
         let driveFileId = null;
-        let state = { lastModified: 0, patients: [], appointments: [] };
-        let currentWeekStartDate = getMonday(new Date());
-
+        let state = { lastModified: 0, transactions: [] };
+        
+        let weeklyChart, monthlyChart, totalChart;
         let ui;
 
-        window.onload = function() {
+        document.addEventListener('DOMContentLoaded', () => {
             ui = {
                 authorizeButton: document.getElementById('authorize_button'),
                 signoutButton: document.getElementById('signout_button'),
@@ -284,686 +293,360 @@
                 userNameSpan: document.getElementById('user_name'),
                 syncStatusDot: document.getElementById('sync-status-dot'),
                 syncStatusText: document.getElementById('sync-status-text'),
-                patientListEl: document.getElementById('patientList'),
-                calendarHead: document.getElementById('calendarHead'),
-                calendarBody: document.getElementById('calendarBody'),
-                patientModal: document.getElementById('patientModal'),
-                appointmentModal: document.getElementById('appointmentModal'),
-                confirmRecurrenceModal: document.getElementById('confirmRecurrenceModal'),
-                confirmActionModal: document.getElementById('confirmActionModal'),
-                patientForm: document.getElementById('patientForm'),
-                appointmentForm: document.getElementById('appointmentForm'),
-                patientIdInput: document.getElementById('patientId'),
-                patientModalTitle: document.getElementById('patientModalTitle'),
-                patientNameInput: document.getElementById('patientName'),
-                patientSurnameInput: document.getElementById('patientSurname'),
-                patientPhoneInput: document.getElementById('patientPhone'),
-                patientAddressInput: document.getElementById('patientAddress'),
-                patientDefaultPriceInput: document.getElementById('patientDefaultPrice'),
-                patientNotesInput: document.getElementById('patientNotes'),
-                appointmentModalTitle: document.getElementById('appointmentModalTitle'),
-                appointmentIdInput: document.getElementById('appointmentId'),
-                originalAppointmentDataInput: document.getElementById('originalAppointmentData'),
-                appointmentPatientSelect: document.getElementById('appointmentPatient'),
-                appointmentPriceInput: document.getElementById('appointmentPrice'),
-                appointmentDateInput: document.getElementById('appointmentDate'),
-                appointmentTimeInput: document.getElementById('appointmentTime'),
-                appointmentDurationInput: document.getElementById('appointmentDuration'),
-                appointmentNotesInput: document.getElementById('appointmentNotes'),
-                conflictError: document.getElementById('conflictError'),
-                deleteAppointmentBtn: document.getElementById('deleteAppointmentBtn'),
-                deletePatientBtn: document.getElementById('deletePatientBtn'),
-                printWeekBtn: document.getElementById('printWeekBtn'),
-                togglePatientListBtn: document.getElementById('togglePatientListBtn'),
-                patientSidebar: document.getElementById('patientSidebar'),
-                sidebarBackdrop: document.getElementById('sidebarBackdrop'),
-                recurringOptions: document.getElementById('recurringOptions'),
-                isRecurringCheckbox: document.getElementById('isRecurring'),
-                recurringWeeksInput: document.getElementById('recurringWeeks'),
-                weekRange: document.getElementById('weekRange')
+                addWeeklyIncomeBtn: document.getElementById('addWeeklyIncomeBtn'),
+                addMonthlyIncomeBtn: document.getElementById('addMonthlyIncomeBtn'),
+                addExpenseBtn: document.getElementById('addExpenseBtn'),
+                expenseModal: document.getElementById('expenseModal'),
+                expenseForm: document.getElementById('expenseForm'),
+                expenseModalTitle: document.getElementById('expenseModalTitle'),
+                expenseIdInput: document.getElementById('expenseId'),
+                expenseAmountInput: document.getElementById('expenseAmount'),
+                expenseDateInput: document.getElementById('expenseDate'),
+                expenseCategorySelect: document.getElementById('expenseCategory'),
+                expenseFundSelect: document.getElementById('expenseFund'),
+                expenseNotesInput: document.getElementById('expenseNotes'),
+                cancelExpenseBtn: document.getElementById('cancelExpenseBtn'),
+                deleteExpenseBtn: document.getElementById('deleteExpenseBtn'),
+                transactionsList: document.getElementById('transactionsList'),
+                weeklyBalanceEl: document.getElementById('weeklyBalance'),
+                monthlyBalanceEl: document.getElementById('monthlyBalance'),
+                summaryTableBody: document.getElementById('summaryTableBody'),
+                toggleReportsBtn: document.getElementById('toggleReportsBtn'),
+                reportsSidebar: document.getElementById('reportsSidebar'),
+                reportsBackdrop: document.getElementById('reportsBackdrop'),
+                closeReportsBtn: document.getElementById('closeReportsBtn')
             };
-
+            
+            Chart.register(ChartDataLabels);
+            populateCategories();
             loadStateFromLocal();
             refreshUI();
             
             gapi.load('client', initializeGapiClient);
             const script = document.createElement('script');
             script.src = 'https://accounts.google.com/gsi/client';
-            script.async = true;
-            script.defer = true;
+            script.async = true; script.defer = true;
             script.onload = initializeGis;
             document.body.appendChild(script);
 
             setupEventListeners();
-        };
-
-        async function initializeGapiClient() {
-            await gapi.client.init({ apiKey: API_KEY, discoveryDocs: DISCOVERY_DOCS });
-        }
-
-        function initializeGis() {
-            tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: CLIENT_ID,
-                scope: SCOPES,
-                callback: handleTokenResponse,
-                error_callback: handleGisError,
-            });
-            tokenClient.requestAccessToken({prompt: 'none'});
-        }
+        });
         
-        async function handleTokenResponse(resp) {
-            if (resp.error) { return; }
-            gapi.client.setToken(resp);
-            updateSigninStatus(true);
-            await syncWithDrive();
-        }
+        // --- AUTH & SYNC ---
+        async function initializeGapiClient() { await gapi.client.init({ apiKey: API_KEY, discoveryDocs: DISCOVERY_DOCS }); }
+        function initializeGis() { tokenClient = google.accounts.oauth2.initTokenClient({ client_id: CLIENT_ID, scope: SCOPES, callback: handleTokenResponse, error_callback: handleGisError, }); tokenClient.requestAccessToken({prompt: 'none'}); }
+        async function handleTokenResponse(resp) { if (resp.error) { return; } gapi.client.setToken(resp); updateSigninStatus(true); await syncWithDrive(); }
+        function handleGisError(error) { console.log('Silent login failed.', error); updateSigninStatus(false); }
+        function handleAuthClick() { if (tokenClient) { if (gapi.client.getToken() === null) { tokenClient.requestAccessToken({prompt: 'consent'}); } else { tokenClient.requestAccessToken({prompt: ''}); } } }
+        function handleSignoutClick() { const token = gapi.client.getToken(); if (token !== null) { google.accounts.oauth2.revoke(token.access_token, () => { gapi.client.setToken(null); updateSigninStatus(false); }); } }
+        function updateSigninStatus(isSignedIn) { ui.authorizeButton.classList.toggle('hidden', isSignedIn); ui.userInfoDiv.classList.toggle('hidden', !isSignedIn); if (isSignedIn) { gapi.client.request({ path: 'https://www.googleapis.com/oauth2/v1/userinfo' }).then(response => { ui.userNameSpan.textContent = `Ciao, ${response.result.given_name}`; }); } else { ui.userNameSpan.textContent = ''; driveFileId = null; updateSyncStatus('offline'); } }
+        async function findOrCreateDriveFile() { const response = await gapi.client.drive.files.list({ q: `name='${DRIVE_FILENAME}' and trashed=false`, spaces: 'drive', fields: 'files(id, name)', }); if (response.result.files.length > 0) { return response.result.files[0].id; } const createResponse = await gapi.client.drive.files.create({ resource: { name: DRIVE_FILENAME, appProperties: {isFamilyExpenseApp: 'true'}, parents: ['root'] }, fields: 'id', }); return createResponse.result.id; }
+        async function loadFromDrive(fileId) { try { const response = await gapi.client.drive.files.get({ fileId, alt: 'media' }); return response.result; } catch (e) { console.error("Error loading from Drive:", e); return null; } }
+        async function saveToDrive(fileId, content) { updateSyncStatus('online'); const boundary = '-------314159265358979323846'; const multipartRequestBody = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({ name: DRIVE_FILENAME, mimeType: 'application/json' })}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(content)}\r\n--${boundary}--`; try { await gapi.client.request({ path: `/upload/drive/v3/files/${fileId}`, method: 'PATCH', params: { uploadType: 'multipart' }, headers: { 'Content-Type': `multipart/related; boundary="${boundary}"` }, body: multipartRequestBody }); updateSyncStatus('synced'); } catch (error) { console.error("Error saving to Drive:", error); updateSyncStatus('offline'); } }
+        async function syncWithDrive() { if (!gapi.client.getToken()) return; updateSyncStatus('online'); if (!driveFileId) driveFileId = await findOrCreateDriveFile(); const driveData = await loadFromDrive(driveFileId); const localData = getStateFromLocal(); if (driveData && (!localData || driveData.lastModified > localData.lastModified)) { state = driveData; } saveState(); refreshUI(); }
+        function updateSyncStatus(status) { ui.syncStatusDot.className = 'sync-status-dot'; const statuses = { offline: { class: 'sync-offline', text: 'Offline' }, online: { class: 'sync-online', text: 'Sincronizzazione...' }, synced: { class: 'sync-synced', text: 'Sincronizzato' } }; ui.syncStatusDot.classList.add(statuses[status].class); ui.syncStatusText.textContent = statuses[status].text; }
+        function loadStateFromLocal() { const storedState = localStorage.getItem(LOCAL_STORAGE_KEY); if (storedState) state = JSON.parse(storedState); }
+        function getStateFromLocal() { return JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || { lastModified: 0, transactions: [] }; }
+        function saveState() { state.lastModified = Date.now(); localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state)); if (gapi.client.getToken() && driveFileId) { saveToDrive(driveFileId, state); } }
 
-        function handleGisError(error) {
-            console.log('Silent login failed or user not logged in.', error);
-            updateSigninStatus(false);
-        }
-
-        function handleAuthClick() {
-            if (tokenClient) {
-                 if (gapi.client.getToken() === null) {
-                    tokenClient.requestAccessToken({prompt: 'consent'});
-                } else {
-                    tokenClient.requestAccessToken({prompt: ''});
-                }
-            } else {
-                console.error("Google Token Client not initialized.");
-            }
-        }
-
-        function handleSignoutClick() {
-            const token = gapi.client.getToken();
-            if (token !== null) {
-                google.accounts.oauth2.revoke(token.access_token, () => {
-                    gapi.client.setToken(null);
-                    updateSigninStatus(false);
-                });
-            }
-        }
-
-        function updateSigninStatus(isSignedIn) {
-            ui.authorizeButton.classList.toggle('hidden', isSignedIn);
-            ui.userInfoDiv.classList.toggle('hidden', !isSignedIn);
-            
-            if (isSignedIn) {
-                 gapi.client.request({ path: 'https://www.googleapis.com/oauth2/v1/userinfo' })
-                    .then(response => {
-                        ui.userNameSpan.textContent = `Ciao, ${response.result.given_name}`;
-                    });
-            } else {
-                ui.userNameSpan.textContent = '';
-                driveFileId = null;
-                updateSyncStatus('offline');
-            }
-        }
-
-        async function findOrCreateDriveFile() {
-            const response = await gapi.client.drive.files.list({
-                q: `name='${DRIVE_FILENAME}' and trashed=false`,
-                spaces: 'drive',
-                fields: 'files(id, name, modifiedTime)',
-            });
-            if (response.result.files.length > 0) {
-                return response.result.files[0].id;
-            }
-            const createResponse = await gapi.client.drive.files.create({
-                resource: { name: DRIVE_FILENAME, appProperties: {isPhysioApp: 'true'}, parents: ['root'] },
-                fields: 'id',
-            });
-            return createResponse.result.id;
-        }
-
-        async function loadFromDrive(fileId) {
-            try {
-                const response = await gapi.client.drive.files.get({ fileId, alt: 'media' });
-                return response.result;
-            } catch (e) { console.error("Error loading from Drive:", e); return null; }
-        }
-
-        async function saveToDrive(fileId, content) {
-            updateSyncStatus('online');
-            const boundary = '-------314159265358979323846';
-            const multipartRequestBody = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({ name: DRIVE_FILENAME, mimeType: 'application/json' })}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(content)}\r\n--${boundary}--`;
-            try {
-                await gapi.client.request({
-                    path: `/upload/drive/v3/files/${fileId}`,
-                    method: 'PATCH',
-                    params: { uploadType: 'multipart' },
-                    headers: { 'Content-Type': `multipart/related; boundary="${boundary}"` },
-                    body: multipartRequestBody
-                });
-                updateSyncStatus('synced');
-            } catch (error) { console.error("Error saving to Drive:", error); updateSyncStatus('offline'); }
-        }
-        
-        async function syncWithDrive() {
-            if (!gapi.client.getToken()) return;
-            updateSyncStatus('online');
-            if (!driveFileId) driveFileId = await findOrCreateDriveFile();
-            const driveData = await loadFromDrive(driveFileId);
-            const localData = getStateFromLocal();
-            
-            if (driveData && (!localData || driveData.lastModified > localData.lastModified)) {
-                state = driveData;
-            }
-            state.lastModified = Date.now();
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
-            await saveToDrive(driveFileId, state);
-            refreshUI();
-        }
-
-        function updateSyncStatus(status) {
-            ui.syncStatusDot.className = 'sync-status-dot';
-            const statuses = {
-                offline: { class: 'sync-offline', text: 'Offline' },
-                online: { class: 'sync-online', text: 'Sincronizzazione...' },
-                synced: { class: 'sync-synced', text: 'Sincronizzato' }
-            };
-            ui.syncStatusDot.classList.add(statuses[status].class);
-            ui.syncStatusText.textContent = statuses[status].text;
-        }
-
-        function loadStateFromLocal() {
-            const storedState = localStorage.getItem(LOCAL_STORAGE_KEY);
-            if (storedState) state = JSON.parse(storedState);
-        }
-        
-        function getStateFromLocal() {
-             return JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || { lastModified: 0, patients: [], appointments: [] };
-        }
-
-        function saveState() {
-            state.lastModified = Date.now();
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
-            if (gapi.client.getToken() && driveFileId) {
-                saveToDrive(driveFileId, state);
-            }
-        }
-        
+        // --- UI & CORE APP LOGIC ---
         function refreshUI() {
-            renderPatientList();
-            renderCalendar();
+            renderBalances();
+            renderTransactions();
+            renderSummary();
         }
 
-        function getMonday(d) {
-            d = new Date(d); const day = d.getDay();
-            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-            const monday = new Date(d.setDate(diff));
-            monday.setHours(0, 0, 0, 0); return monday;
-        }
-        function addDays(date, days) {
-            const result = new Date(date); result.setDate(result.getDate() + days); return result;
-        }
-        function formatDate(date, format = 'YYYY-MM-DD') {
-            const d = new Date(date);
-            const year = d.getFullYear(); const month = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0');
-            if (format === 'YYYY-MM-DD') return `${year}-${month}-${day}`;
-            if (format === 'DD/MM') return `${day}/${month}`;
-            return d.toLocaleDateString('it-IT');
+        function renderBalances() {
+            let weekly = 0;
+            let monthly = 0;
+            state.transactions.forEach(t => {
+                const amount = parseFloat(t.amount) || 0;
+                if(t.type === 'income') {
+                    if(t.fund === 'weekly') weekly += amount;
+                    else monthly += amount;
+                } else { // expense
+                    if(t.fund === 'weekly') weekly -= amount;
+                    else monthly -= amount;
+                }
+            });
+            ui.weeklyBalanceEl.textContent = `€${weekly.toFixed(2)}`;
+            ui.monthlyBalanceEl.textContent = `€${monthly.toFixed(2)}`;
         }
 
-        const PATIENT_COLORS = ['#a7f3d0', '#bae6fd', '#fbcfe8', '#fef08a', '#c7d2fe', '#d9f99d', '#fed7aa', '#e9d5ff', '#a5f3fc', '#fecaca', '#bbf7d0', '#bfdbfe', '#f5d0fe', '#fde68a', '#d1d5db', '#fde047'];
-        function getPatientColor(patientId) {
-            if (!patientId) return PATIENT_COLORS[14];
-            let hash = 0;
-            for (let i = 0; i < patientId.length; i++) { hash = patientId.charCodeAt(i) + ((hash << 5) - hash); }
-            return PATIENT_COLORS[Math.abs(hash % PATIENT_COLORS.length)];
-        }
-        
-        function openPatientModal(patient = null) {
-            ui.patientForm.reset();
-            const addAppointmentBtn = document.getElementById('addAppointmentFromPatientBtn');
-            ui.patientIdInput.value = patient ? patient.id : '';
-            ui.patientModalTitle.textContent = patient ? 'Modifica Paziente' : 'Nuovo Paziente';
-            
-            if(patient) {
-                ui.patientNameInput.value = patient.name;
-                ui.patientSurnameInput.value = patient.surname;
-                ui.patientPhoneInput.value = patient.phone || '';
-                ui.patientAddressInput.value = patient.address || '';
-                ui.patientDefaultPriceInput.value = patient.defaultPrice || '';
-                ui.patientNotesInput.value = patient.notes || '';
-                addAppointmentBtn.classList.remove('hidden');
-                ui.deletePatientBtn.classList.remove('hidden');
-            } else {
-                addAppointmentBtn.classList.add('hidden');
-                ui.deletePatientBtn.classList.add('hidden');
+        function renderTransactions() {
+            ui.transactionsList.innerHTML = '';
+            if (state.transactions.length === 0) {
+                ui.transactionsList.innerHTML = '<p class="text-gray-500 text-center">Nessuna transazione registrata.</p>';
+                return;
             }
-            ui.patientModal.style.display = 'flex';
-        }
-        function closePatientModal() { ui.patientModal.style.display = 'none'; }
-        
-        function renderPatientList() {
-            ui.patientListEl.innerHTML = '';
-            const sortedPatients = [...state.patients].sort((a,b) => a.surname.localeCompare(b.surname));
-
-            if (sortedPatients.length === 0) {
-                ui.patientListEl.innerHTML = `<div class="text-center p-4 text-gray-500">Nessun paziente.</div>`; return;
-            }
-            sortedPatients.forEach(patient => {
+            const sorted = [...state.transactions].sort((a,b) => new Date(b.date) - new Date(a.date));
+            sorted.slice(0, 20).forEach(t => {
+                const isExpense = t.type === 'expense';
+                const category = EXPENSE_CATEGORIES.find(c => c.name === t.category);
+                const borderColor = isExpense ? (category ? category.color : '#9CA3AF') : (t.fund === 'weekly' ? '#22C55E' : '#3B82F6');
+                
                 const div = document.createElement('div');
-                div.className = 'p-3 rounded-lg hover:bg-gray-100 cursor-pointer flex items-center space-x-3';
-                div.innerHTML = `<div class="w-4 h-4 rounded-full" style="background-color: ${getPatientColor(patient.id)};"></div><p class="font-semibold">${patient.surname} ${patient.name}</p>`;
-                div.addEventListener('click', () => openPatientModal(patient));
-                ui.patientListEl.appendChild(div);
+                div.className = `p-3 rounded-lg flex items-center justify-between border-l-4`;
+                div.style.borderColor = borderColor;
+                div.style.backgroundColor = `${borderColor}20`;
+                
+                let description = isExpense 
+                    ? `<span class="font-semibold">${t.category}</span><p class="text-xs text-gray-500">${t.notes || ''}</p>`
+                    : `<span class="font-semibold">Entrata ${t.fund === 'weekly' ? 'Settimanale' : 'Mensile'}</span>`;
+                
+                div.innerHTML = `
+                    <div class="flex items-center space-x-3 flex-grow cursor-pointer" data-id="${t.id}">
+                        <i class="fas ${isExpense ? 'fa-arrow-down' : 'fa-arrow-up'}" style="color:${borderColor}"></i>
+                        <div>
+                           ${description}
+                        </div>
+                    </div>
+                    <div class="text-right flex items-center">
+                        <div class="mr-2">
+                            <p class="font-bold text-lg" style="color:${isExpense ? '#DC2626' : '#16A34A'}">
+                                ${isExpense ? '-' : '+'}€${parseFloat(t.amount).toFixed(2)}
+                            </p>
+                            <p class="text-xs text-gray-400">${new Date(t.date).toLocaleDateString('it-IT')}</p>
+                        </div>
+                         <button data-id="${t.id}" class="delete-transaction-btn text-gray-400 hover:text-red-500 p-2"><i class="fas fa-times"></i></button>
+                    </div>
+                `;
+                ui.transactionsList.appendChild(div);
             });
-            updateAppointmentPatientDatalist();
         }
         
-        function updateAppointmentPatientDatalist() {
-            const currentVal = ui.appointmentPatientSelect.value;
-            ui.appointmentPatientSelect.innerHTML = '<option value="" disabled>Seleziona un paziente...</option>';
-            const sortedPatients = [...state.patients].sort((a,b) => a.surname.localeCompare(b.surname));
-            sortedPatients.forEach(p => {
-                ui.appointmentPatientSelect.innerHTML += `<option value="${p.id}">${p.surname} ${p.name}</option>`;
-            });
-            ui.appointmentPatientSelect.value = currentVal;
-            if (!ui.appointmentPatientSelect.value) { ui.appointmentPatientSelect.selectedIndex = 0; }
-        }
-
-        function changeWeek(days) { currentWeekStartDate = addDays(currentWeekStartDate, days); renderCalendar(); }
-            
-        function renderCalendar() {
-            const weekRangeEl = document.getElementById('weekRange');
-            const endDate = addDays(currentWeekStartDate, 6);
-            weekRangeEl.textContent = `${formatDate(currentWeekStartDate, 'DD/MM')} - ${formatDate(endDate, 'DD/MM')}`;
-            ui.calendarHead.innerHTML = '';
-            const headerRow = document.createElement('tr');
-            headerRow.innerHTML = `<th class="p-2 sticky left-0 bg-white z-10 w-20">Orario</th>`;
-            const daysOfWeek = ['L', 'M', 'M', 'G', 'V', 'S', 'D'];
-            for (let i = 0; i < 7; i++) {
-                const day = addDays(currentWeekStartDate, i);
-                headerRow.innerHTML += `<th class="p-2 text-sm sm:text-base">${daysOfWeek[i]}<br><span class="font-normal text-xs sm:text-sm">${formatDate(day, 'DD/MM')}</span></th>`;
-            }
-            ui.calendarHead.appendChild(headerRow);
-            ui.calendarBody.innerHTML = '';
-            for (let t = 14 * 60; t < 20 * 60; t += 15) {
-                const time = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
-                const timeRow = document.createElement('tr');
-                timeRow.innerHTML = `<td class="p-2 sticky left-0 bg-white z-10 font-mono text-xs sm:text-sm text-gray-600">${time}</td>`;
-                for (let i = 0; i < 7; i++) {
-                    const date = formatDate(addDays(currentWeekStartDate, i));
-                    timeRow.innerHTML += `<td class="h-12" data-date="${date}" data-time="${time}"></td>`;
-                }
-                ui.calendarBody.appendChild(timeRow);
-            }
-            populateCalendar();
-        }
-            
-        function populateCalendar() {
-            document.querySelectorAll('td[data-date]').forEach(cell => {
-                cell.className = 'h-12'; cell.removeAttribute('rowspan'); cell.style.display = '';
-                cell.innerHTML = ''; cell.onclick = (e) => openAppointmentModal(e);
+        function renderSummary() {
+            const summary = {};
+            EXPENSE_CATEGORIES.forEach(cat => {
+                summary[cat.name] = { weekly: 0, monthly: 0, total: 0, color: cat.color };
             });
 
-            const startStr = formatDate(currentWeekStartDate);
-            const endStr = formatDate(addDays(currentWeekStartDate, 6));
-            const weekAppointments = state.appointments.filter(app => app.date >= startStr && app.date <= endStr);
-            weekAppointments.sort((a,b) => a.time.localeCompare(b.time));
-
-            weekAppointments.forEach(app => {
-                const startCell = document.querySelector(`td[data-date="${app.date}"][data-time="${app.time}"]`);
-                if (!startCell || startCell.style.display === 'none') return;
-                const duration = parseInt(app.duration) || 60;
-                const slots = duration / 15;
-                startCell.setAttribute('rowspan', slots);
-                startCell.className = 'appointment-cell';
-                startCell.style.backgroundColor = getPatientColor(app.patientId);
-                startCell.innerHTML = `<div class="p-1 text-xs font-semibold">${app.patientName}</div><div class="p-1 text-xs">${app.time} - ${app.price}€</div>`;
-                startCell.onclick = () => openAppointmentModal(app);
-                if (slots > 1) {
-                    let nextCell = startCell.parentElement.nextElementSibling;
-                    for (let i = 1; i < slots && nextCell; i++) {
-                        const cellToHide = nextCell.querySelector(`td[data-date="${app.date}"]`);
-                        if(cellToHide) cellToHide.style.display = 'none';
-                        nextCell = nextCell.nextElementSibling;
-                    }
+            state.transactions.filter(t => t.type === 'expense').forEach(t => {
+                if (summary[t.category]) {
+                    const amount = parseFloat(t.amount) || 0;
+                    summary[t.category][t.fund] += amount;
+                    summary[t.category].total += amount;
                 }
             });
-            calculateWeeklyTotal(weekAppointments);
-        }
-            
-        function calculateWeeklyTotal(appointments) {
-            const total = appointments.reduce((sum, app) => sum + (Number(app.price) || 0), 0);
-            document.getElementById('weeklyTotal').querySelector('p:last-child').textContent = `€ ${total.toFixed(2)}`;
-        }
 
-        function openAppointmentModal(appointmentOrEvent, preselectedPatient = null) {
-            ui.appointmentForm.reset();
-            ui.appointmentDurationInput.value = '60';
-            ui.conflictError.classList.add('hidden');
-            ui.deleteAppointmentBtn.classList.add('hidden');
-            ui.recurringOptions.classList.add('hidden');
-            ui.isRecurringCheckbox.checked = false;
-            document.querySelectorAll('#weekdays input').forEach(c => { c.checked = false; c.parentElement.classList.remove('bg-teal-500', 'text-white'); });
-
-            if (appointmentOrEvent && appointmentOrEvent.id) { // Existing appointment
-                const app = appointmentOrEvent;
-                ui.appointmentModalTitle.textContent = 'Modifica Appuntamento';
-                ui.appointmentIdInput.value = app.id;
-                ui.originalAppointmentDataInput.value = JSON.stringify(app);
-                ui.appointmentPatientSelect.value = app.patientId;
-                ui.appointmentPriceInput.value = app.price;
-                ui.appointmentDateInput.value = app.date;
-                ui.appointmentTimeInput.value = app.time;
-                ui.appointmentDurationInput.value = app.duration || 60;
-                ui.appointmentNotesInput.value = app.notes || '';
-                ui.deleteAppointmentBtn.classList.remove('hidden');
-                ui.isRecurringCheckbox.disabled = !!app.recurringId;
-            } else { // New appointment
-                ui.appointmentModalTitle.textContent = 'Nuovo Appuntamento';
-                ui.appointmentIdInput.value = '';
-                ui.isRecurringCheckbox.disabled = false;
-                if (preselectedPatient) {
-                     ui.appointmentPatientSelect.value = preselectedPatient.id;
-                     ui.appointmentPriceInput.value = preselectedPatient.defaultPrice || '';
-                } else if (appointmentOrEvent && appointmentOrEvent.target) {
-                    const cell = appointmentOrEvent.target.closest('td[data-date]');
-                    if (!cell) return;
-                    ui.appointmentDateInput.value = cell.dataset.date;
-                    ui.appointmentTimeInput.value = cell.dataset.time;
-                }
+            ui.summaryTableBody.innerHTML = '';
+            for (const category in summary) {
+                const data = summary[category];
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900 flex items-center"><div class="w-4 h-4 rounded-full mr-3" style="background-color:${data.color}"></div>${category}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-gray-500">€${data.weekly.toFixed(2)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-gray-500">€${data.monthly.toFixed(2)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right font-bold text-gray-800">€${data.total.toFixed(2)}</td>
+                `;
+                ui.summaryTableBody.appendChild(row);
             }
-            ui.appointmentModal.style.display = 'flex';
+            renderCharts(summary);
         }
-        function closeAppointmentModal() { ui.appointmentModal.style.display = 'none'; }
         
-        async function handleAppointmentSubmit(e) {
-            e.preventDefault();
-            const appointmentId = ui.appointmentIdInput.value;
-            const patientId = ui.appointmentPatientSelect.value;
-            const patientName = ui.appointmentPatientSelect.options[ui.appointmentPatientSelect.selectedIndex].textContent;
-            
-            const appointmentData = {
-                patientId, patientName,
-                price: ui.appointmentPriceInput.value,
-                notes: ui.appointmentNotesInput.value.trim(),
-                date: ui.appointmentDateInput.value,
-                time: ui.appointmentTimeInput.value,
-                duration: ui.appointmentDurationInput.value || '60',
+        function renderCharts(summary) {
+            const chartData = {
+                weekly: { labels: [], data: [], colors: [] },
+                monthly: { labels: [], data: [], colors: [] },
+                total: { labels: [], data: [], colors: [] },
             };
-            if (!patientId || !appointmentData.price || !appointmentData.date || !appointmentData.time) {
-                alert('Paziente, prezzo, data e ora sono obbligatori.'); return;
-            }
 
-            if (appointmentId) {
-                const originalAppointmentData = JSON.parse(ui.originalAppointmentDataInput.value);
-                
-                if (originalAppointmentData.recurringId) { // Editing an ALREADY recurring appointment
-                    appointmentData.recurringId = originalAppointmentData.recurringId;
-                    const action = await showRecurrenceConfirmModal('update');
-                    if (action === 'cancel') return;
-                    
-                    if (action === 'single') {
-                        if (await checkConflict(appointmentData, appointmentId)) { ui.conflictError.classList.remove('hidden'); return; }
-                        state.appointments = state.appointments.map(a => a.id === appointmentId ? { ...a, ...appointmentData } : a);
-                    } else if (action === 'all') {
-                        if (!(await updateFutureRecurring(originalAppointmentData, appointmentData))) return;
+            for (const category in summary) {
+                if (summary[category].weekly > 0) {
+                    chartData.weekly.labels.push(category);
+                    chartData.weekly.data.push(summary[category].weekly);
+                    chartData.weekly.colors.push(summary[category].color);
+                }
+                if (summary[category].monthly > 0) {
+                    chartData.monthly.labels.push(category);
+                    chartData.monthly.data.push(summary[category].monthly);
+                    chartData.monthly.colors.push(summary[category].color);
+                }
+                if (summary[category].total > 0) {
+                    chartData.total.labels.push(category);
+                    chartData.total.data.push(summary[category].total);
+                    chartData.total.colors.push(summary[category].color);
+                }
+            }
+            
+            if (weeklyChart) weeklyChart.destroy();
+            weeklyChart = new Chart(document.getElementById('weeklyChart'), createChartConfig(chartData.weekly.labels, chartData.weekly.data, chartData.weekly.colors));
+            
+            if (monthlyChart) monthlyChart.destroy();
+            monthlyChart = new Chart(document.getElementById('monthlyChart'), createChartConfig(chartData.monthly.labels, chartData.monthly.data, chartData.monthly.colors));
+            
+            if (totalChart) totalChart.destroy();
+            totalChart = new Chart(document.getElementById('totalChart'), createChartConfig(chartData.total.labels, chartData.total.data, chartData.total.colors));
+        }
+
+        function createChartConfig(labels, data, colors) {
+            const hasData = data.some(d => d > 0);
+            return {
+                type: 'pie',
+                data: {
+                    labels: hasData ? labels : ["Nessuna spesa"],
+                    datasets: [{
+                        data: hasData ? data : [1],
+                        backgroundColor: hasData ? colors : ['#E5E7EB'],
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false },
+                        datalabels: {
+                            display: hasData,
+                            formatter: (value, ctx) => {
+                                let sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                let percentage = (value * 100 / sum).toFixed(1) + "%";
+                                const label = ctx.chart.data.labels[ctx.dataIndex];
+                                return `${label}\n€${value.toFixed(2)} (${percentage})`;
+                            },
+                            color: '#fff',
+                            font: { weight: 'bold', size: 10 },
+                            textStrokeColor: '#333',
+                            textStrokeWidth: 2,
+                        }
                     }
-                } else if(ui.isRecurringCheckbox.checked) { // Converting a SINGLE appointment to RECURRING
-                    const newSeries = await generateRecurringAppointments(appointmentData, appointmentId);
-                    if (!newSeries) return; // Conflict check failed
-                    state.appointments = state.appointments.filter(a => a.id !== appointmentId);
-                    state.appointments.push(...newSeries);
-                }
-                else { // Editing a SINGLE appointment (and keeping it single)
-                    if (await checkConflict(appointmentData, appointmentId)) { ui.conflictError.classList.remove('hidden'); return; }
-                    state.appointments = state.appointments.map(a => a.id === appointmentId ? { ...appointmentData, id: a.id } : a);
-                }
-            } else { // Creating a NEW appointment
-                if (ui.isRecurringCheckbox.checked) {
-                    const newSeries = await generateRecurringAppointments(appointmentData);
-                    if(!newSeries) return;
-                    state.appointments.push(...newSeries);
-                } else {
-                    if (await checkConflict(appointmentData)) { ui.conflictError.classList.remove('hidden'); return; }
-                    appointmentData.id = crypto.randomUUID();
-                    state.appointments.push(appointmentData);
                 }
             }
-            saveState();
-            refreshUI();
-            closeAppointmentModal();
         }
-
-        async function handleDeleteAppointment() {
-            const appointmentId = ui.appointmentIdInput.value;
-            if (!appointmentId) return;
-            const originalAppointmentData = JSON.parse(ui.originalAppointmentDataInput.value);
-
-            const action = originalAppointmentData.recurringId ? await showRecurrenceConfirmModal('delete') : 'single';
-            if (action === 'cancel') return;
-            
-            if (action === 'single') {
-                state.appointments = state.appointments.filter(a => a.id !== appointmentId);
-            } else if (action === 'all') {
-                deleteFutureRecurring(originalAppointmentData);
-            }
-            
-            saveState();
-            refreshUI();
-            closeAppointmentModal();
-        }
-            
-        async function generateRecurringAppointments(baseAppointment, ignoreId = null) {
-            const weeks = parseInt(ui.recurringWeeksInput.value);
-            const selectedDays = Array.from(document.querySelectorAll('#weekdays input:checked')).map(c => parseInt(c.dataset.day));
-            if (selectedDays.length === 0) { alert("Seleziona almeno un giorno per la ricorrenza."); return null; }
-            
-            const startDate = new Date(baseAppointment.date + 'T00:00:00');
-            const recurringId = baseAppointment.recurringId || crypto.randomUUID();
-            let appointmentsToAdd = [];
-            for (let w = 0; w < weeks; w++) {
-                for (const dayIndex of selectedDays) {
-                    const mondayOfWeek = getMonday(addDays(startDate, w * 7));
-                    const offset = dayIndex === 0 ? 6 : dayIndex - 1;
-                    const dateForThisInstance = addDays(mondayOfWeek, offset);
-                    
-                    const newApp = { ...baseAppointment, date: formatDate(dateForThisInstance), recurringId, id: crypto.randomUUID() };
-                    appointmentsToAdd.push(newApp);
-                }
-            }
-            for (const app of appointmentsToAdd) {
-                if (await checkConflict(app, ignoreId)) {
-                    ui.conflictError.classList.remove('hidden');
-                    alert(`Conflitto: ${app.date} ${app.time}.`); return null;
-                }
-            }
-            return appointmentsToAdd;
-        }
-
-        async function updateFutureRecurring(originalData, newData) {
-            const futureAppointments = state.appointments
-                .filter(a => a.recurringId === originalData.recurringId && a.date >= originalData.date)
-                .sort((a,b) => a.date.localeCompare(b.date));
-                
-            const otherAppointments = state.appointments.filter(a => a.recurringId !== originalData.recurringId || a.date < originalData.date);
-            
-            const originalDate = new Date(originalData.date);
-            const newDate = new Date(newData.date);
-            const utc1 = Date.UTC(originalDate.getFullYear(), originalDate.getMonth(), originalDate.getDate());
-            const utc2 = Date.UTC(newDate.getFullYear(), newDate.getMonth(), newDate.getDate());
-            const dayDifference = Math.floor((utc2 - utc1) / (1000 * 60 * 60 * 24));
-
-            const updatedFutureAppointments = futureAppointments.map(appToUpdate => {
-                const currentInstanceDate = new Date(appToUpdate.date);
-                const newDateForThisInstance = addDays(currentInstanceDate, dayDifference);
-                
-                return { 
-                    ...appToUpdate, 
-                    patientId: newData.patientId,
-                    patientName: newData.patientName,
-                    price: newData.price,
-                    notes: newData.notes,
-                    time: newData.time,
-                    duration: newData.duration,
-                    date: formatDate(newDateForThisInstance),
-                };
+        
+        function populateCategories() {
+            ui.expenseCategorySelect.innerHTML = '<option value="" disabled selected>Scegli categoria...</option>';
+            EXPENSE_CATEGORIES.forEach(cat => {
+                ui.expenseCategorySelect.innerHTML += `<option value="${cat.name}">${cat.name}</option>`;
             });
+        }
 
-            for(const app of updatedFutureAppointments) {
-                const otherAppsForCheck = [...otherAppointments, ...updatedFutureAppointments.filter(a => a.id !== app.id)];
-                if (await checkConflict(app, app.id, otherAppsForCheck)) {
-                    ui.conflictError.classList.remove('hidden');
-                    alert(`Conflitto aggiornando la serie: ${app.date} ${app.time}. L'operazione è stata annullata.`);
-                    return false;
-                }
+        function openExpenseModal(expense = null) {
+            ui.expenseForm.reset();
+            ui.expenseIdInput.value = expense ? expense.id : '';
+            ui.expenseModalTitle.textContent = expense ? 'Modifica Spesa' : 'Aggiungi Spesa';
+            ui.deleteExpenseBtn.classList.toggle('hidden', !expense);
+
+            if(expense) {
+                ui.expenseAmountInput.value = expense.amount;
+                ui.expenseDateInput.value = expense.date;
+                ui.expenseCategorySelect.value = expense.category;
+                ui.expenseFundSelect.value = expense.fund;
+                ui.expenseNotesInput.value = expense.notes;
+            } else {
+                ui.expenseDateInput.valueAsDate = new Date();
             }
-            state.appointments = [...otherAppointments, ...updatedFutureAppointments];
-            return true;
+            ui.expenseModal.style.display = 'flex';
+        }
+        function closeExpenseModal() { ui.expenseModal.style.display = 'none'; }
+        
+        function handleAddIncome(fund, amount) {
+            const newIncome = {
+                id: crypto.randomUUID(),
+                type: 'income',
+                fund: fund,
+                amount: amount,
+                date: new Date().toISOString().split('T')[0]
+            };
+            state.transactions.push(newIncome);
+            saveState();
+            refreshUI();
         }
 
-        function deleteFutureRecurring(originalData) {
-            state.appointments = state.appointments.filter(a => a.recurringId !== originalData.recurringId || a.date < originalData.date);
-        }
+        async function handleDeleteTransaction(transactionId) {
+            const transaction = state.transactions.find(t => t.id === transactionId);
+            if (!transaction) return;
 
-        async function checkConflict(appData, ignoreId = null, appointmentList = state.appointments) {
-            const duration = parseInt(appData.duration) || 60;
-            const [startH, startM] = appData.time.split(':').map(Number);
-            const startTime = startH * 60 + startM;
-            const endTime = startTime + duration;
+            const message = `Sei sicuro di voler eliminare questa transazione (${transaction.type === 'income' ? 'Entrata' : 'Spesa'}) di €${parseFloat(transaction.amount).toFixed(2)}?`;
             
-            const dayAppointments = appointmentList.filter(a => a.date === appData.date && a.id !== ignoreId);
-            
-            for(const existingApp of dayAppointments){
-                const [existingStartH, existingStartM] = existingApp.time.split(':').map(Number);
-                const existingStartTime = existingStartH * 60 + existingStartM;
-                const existingEndTime = existingStartTime + (parseInt(existingApp.duration) || 60);
-                if (startTime < existingEndTime && endTime > existingStartTime) return true;
+            const confirmed = await confirmAction('Conferma Eliminazione', message);
+
+            if (confirmed) {
+                state.transactions = state.transactions.filter(t => t.id !== transactionId);
+                saveState();
+                refreshUI();
+                closeExpenseModal();
             }
-            return false;
         }
-
+        
         async function confirmAction(title, message) {
+            const modal = document.getElementById('confirmActionModal');
             document.getElementById('confirmActionTitle').textContent = title;
             document.getElementById('confirmActionMessage').textContent = message;
-            ui.confirmActionModal.style.display = 'flex';
+            modal.style.display = 'flex';
             
             return new Promise((resolve) => {
                 document.getElementById('confirmActionOk').onclick = () => {
-                    ui.confirmActionModal.style.display = 'none';
+                    modal.style.display = 'none';
                     resolve(true);
                 };
                 document.getElementById('confirmActionCancel').onclick = () => {
-                    ui.confirmActionModal.style.display = 'none';
+                    modal.style.display = 'none';
                     resolve(false);
                 };
             });
         }
-        
-        async function handleDeletePatient() {
-            const patientId = ui.patientIdInput.value;
-            if (!patientId) return;
 
-            const patient = state.patients.find(p => p.id === patientId);
-            const confirmed = await confirmAction(
-                'Conferma Eliminazione Paziente', 
-                `Sei sicuro di voler eliminare ${patient.name} ${patient.surname}? Questa azione è permanente e cancellerà anche tutti i suoi appuntamenti.`
-            );
 
-            if (confirmed) {
-                // Remove patient
-                state.patients = state.patients.filter(p => p.id !== patientId);
-                // Remove all appointments for that patient
-                state.appointments = state.appointments.filter(app => app.patientId !== patientId);
-                
-                saveState();
-                refreshUI();
-                closePatientModal();
-            }
+        function toggleReportsSidebar() {
+            ui.reportsSidebar.classList.toggle('translate-x-full');
+            ui.reportsBackdrop.classList.toggle('hidden');
         }
 
-
-        function showRecurrenceConfirmModal(action) {
-            const msgEl = document.getElementById('confirmRecurrenceMessage');
-            const singleBtn = document.getElementById('confirmRecurrenceSingle');
-            const allBtn = document.getElementById('confirmRecurrenceAll');
-            document.getElementById('confirmRecurrenceTitle').textContent = action === 'delete' ? 'Conferma Eliminazione' : 'Conferma Modifica';
-            msgEl.textContent = `Questo è un appuntamento ricorrente. Vuoi ${action === 'delete' ? 'eliminare' : 'modificare'} solo questa data o anche tutte le future?`;
-            singleBtn.textContent = 'Solo questo appuntamento';
-            allBtn.textContent = 'Tutti gli appuntamenti futuri';
-            ui.confirmRecurrenceModal.style.display = 'flex';
-            return new Promise((resolve) => {
-                singleBtn.onclick = () => { ui.confirmRecurrenceModal.style.display = 'none'; resolve('single'); };
-                allBtn.onclick = () => { ui.confirmRecurrenceModal.style.display = 'none'; resolve('all'); };
-                document.getElementById('confirmRecurrenceCancel').onclick = () => { ui.confirmRecurrenceModal.style.display = 'none'; resolve('cancel'); };
-            });
-        }
-        
-        function handlePrint() {
-            const weekRangeText = ui.weekRange.textContent;
-            document.body.dataset.printTitle = `Riepilogo Settimana: ${weekRangeText}`;
-            window.print();
-        }
-
+        // --- EVENT LISTENERS ---
         function setupEventListeners() {
             ui.authorizeButton.onclick = handleAuthClick;
             ui.signoutButton.onclick = handleSignoutClick;
-            document.getElementById('addPatientBtn').onclick = () => openPatientModal();
-            document.getElementById('cancelPatientBtn').onclick = closePatientModal;
-            document.getElementById('cancelAppointmentBtn').onclick = closeAppointmentModal;
-            ui.deletePatientBtn.onclick = handleDeletePatient;
-            document.getElementById('prevWeekBtn').onclick = () => changeWeek(-7);
-            document.getElementById('nextWeekBtn').onclick = () => changeWeek(7);
-            document.getElementById('todayBtn').onclick = () => { currentWeekStartDate = getMonday(new Date()); renderCalendar(); };
-            ui.printWeekBtn.onclick = handlePrint;
-            document.getElementById('addAppointmentFromPatientBtn').onclick = () => {
-                const patient = state.patients.find(p => p.id === ui.patientIdInput.value);
-                if (patient) { closePatientModal(); openAppointmentModal(null, patient); }
-            };
-            ui.patientForm.onsubmit = (e) => {
-                e.preventDefault();
-                const patientId = ui.patientIdInput.value;
-                const patientData = {
-                    id: patientId || crypto.randomUUID(),
-                    name: ui.patientNameInput.value.trim(),
-                    surname: ui.patientSurnameInput.value.trim(),
-                    phone: ui.patientPhoneInput.value.trim(),
-                    address: ui.patientAddressInput.value.trim(),
-                    defaultPrice: ui.patientDefaultPriceInput.value.trim(),
-                    notes: ui.patientNotesInput.value.trim()
-                };
-                if (!patientData.name || !patientData.surname) return;
+            ui.addWeeklyIncomeBtn.onclick = () => handleAddIncome('weekly', 100);
+            ui.addMonthlyIncomeBtn.onclick = () => handleAddIncome('monthly', 400);
+            ui.addExpenseBtn.onclick = () => openExpenseModal();
+            ui.cancelExpenseBtn.onclick = closeExpenseModal;
+            ui.toggleReportsBtn.onclick = toggleReportsSidebar;
+            ui.closeReportsBtn.onclick = toggleReportsSidebar;
+            ui.reportsBackdrop.onclick = toggleReportsSidebar;
+            
+            ui.transactionsList.addEventListener('click', (e) => {
+                const deleteBtn = e.target.closest('.delete-transaction-btn');
+                if (deleteBtn) {
+                    e.stopPropagation();
+                    handleDeleteTransaction(deleteBtn.dataset.id);
+                    return;
+                }
 
-                if (patientId) {
-                    state.patients = state.patients.map(p => p.id === patientId ? patientData : p);
-                } else {
-                    state.patients.push(patientData);
+                const transactionRow = e.target.closest('[data-id]');
+                if (transactionRow) {
+                    const transaction = state.transactions.find(t => t.id === transactionRow.dataset.id);
+                    if (transaction && transaction.type === 'expense') {
+                        openExpenseModal(transaction);
+                    }
+                }
+            });
+
+            ui.expenseForm.onsubmit = (e) => {
+                e.preventDefault();
+                const id = ui.expenseIdInput.value;
+                const expenseData = {
+                    id: id || crypto.randomUUID(),
+                    type: 'expense',
+                    amount: ui.expenseAmountInput.value,
+                    date: ui.expenseDateInput.value,
+                    category: ui.expenseCategorySelect.value,
+                    fund: ui.expenseFundSelect.value,
+                    notes: ui.expenseNotesInput.value.trim()
+                };
+                if (!expenseData.amount || !expenseData.category) return;
+                
+                if (id) { // Update
+                    state.transactions = state.transactions.map(t => t.id === id ? expenseData : t);
+                } else { // Create
+                    state.transactions.push(expenseData);
                 }
                 saveState();
                 refreshUI();
-                closePatientModal();
+                closeExpenseModal();
             };
-            ui.appointmentForm.onsubmit = handleAppointmentSubmit;
-            ui.deleteAppointmentBtn.onclick = handleDeleteAppointment;
-            ui.appointmentPatientSelect.onchange = (e) => {
-                const patient = state.patients.find(p => p.id === e.target.value);
-                if (patient && patient.defaultPrice) { ui.appointmentPriceInput.value = patient.defaultPrice; }
+
+            ui.deleteExpenseBtn.onclick = () => {
+                handleDeleteTransaction(ui.expenseIdInput.value);
             };
-            ui.isRecurringCheckbox.onchange = (e) => {
-                ui.recurringOptions.classList.toggle('hidden', !e.target.checked);
-            };
-            document.querySelectorAll('#weekdays label').forEach(label => {
-                label.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const checkbox = this.querySelector('input');
-                    checkbox.checked = !checkbox.checked;
-                    this.classList.toggle('bg-teal-500', checkbox.checked);
-                    this.classList.toggle('text-white', checkbox.checked);
-                });
-            });
-            ui.togglePatientListBtn.addEventListener('click', () => {
-                ui.patientSidebar.classList.toggle('-translate-x-full');
-                ui.sidebarBackdrop.classList.toggle('hidden');
-            });
-            ui.sidebarBackdrop.addEventListener('click', () => {
-                ui.patientSidebar.classList.add('-translate-x-full');
-                ui.sidebarBackdrop.classList.add('hidden');
-            });
         }
     </script>
 </body>
