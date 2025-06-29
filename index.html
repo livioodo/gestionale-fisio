@@ -381,7 +381,7 @@
                     }
                 } else if(ui.isRecurringCheckbox.checked) { // Converting a SINGLE appointment to RECURRING
                     const newSeries = await generateRecurringAppointments(appointmentData, appointmentId);
-                    if (!newSeries) return;
+                    if (!newSeries) return; // Conflict check failed
                     state.appointments = state.appointments.filter(a => a.id !== appointmentId);
                     state.appointments.push(...newSeries);
                 }
