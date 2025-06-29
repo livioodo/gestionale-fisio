@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestionale Fisioterapia (Sync)</title>
+    <title>Gestionale Fisioterapia (Locale)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -21,42 +21,11 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #a8a29e; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #78716c; }
-        .sync-status-dot { width: 10px; height: 10px; border-radius: 50%; }
-        .sync-offline { background-color: #f87171; } /* red-400 */
-        .sync-online { background-color: #fbbf24; } /* amber-400 */
-        .sync-synced { background-color: #4ade80; } /* green-400 */
 
         @media print {
-            body {
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-            body::before {
-                content: attr(data-print-title);
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                text-align: center;
-                font-size: 16pt;
-                font-weight: bold;
-                padding-top: 10mm;
-                padding-bottom: 10mm;
-            }
-            header, 
-            #patientSidebar,
-            #addPatientBtn,
-            #prevWeekBtn,
-            #nextWeekBtn,
-            #todayBtn,
-            #printWeekBtn,
-            #patientModal,
-            #appointmentModal,
-            #confirmActionModal,
-            #confirmRecurrenceModal {
-                display: none !important;
-            }
-
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            body::before { content: attr(data-print-title); position: fixed; top: 0; left: 0; width: 100%; text-align: center; font-size: 16pt; font-weight: bold; padding-top: 10mm; padding-bottom: 10mm; }
+            header, #patientSidebar, #addPatientBtn, #prevWeekBtn, #nextWeekBtn, #todayBtn, #printWeekBtn, #patientModal, #appointmentModal, #confirmActionModal, #confirmRecurrenceModal, #togglePatientListBtn { display: none !important; }
             .container { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
             .main-content { width: 100% !important; }
             #calendar-wrapper { overflow: visible !important; margin-top: 40px; }
@@ -65,61 +34,36 @@
             .appointment-cell { color: #000 !important; }
             .bg-white { box-shadow: none !important; border: none !important; padding: 0 !important; }
             #weeklyTotal { margin-top: 20px; text-align: right; }
-
-            @page {
-                size: A4 landscape;
-                margin: 15mm;
-            }
+            @page { size: A4 landscape; margin: 15mm; }
         }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
+<body class="bg-gray-100">
 
-    <!-- Sidebar Backdrop -->
     <div id="sidebarBackdrop" class="fixed inset-0 bg-black/50 z-30 hidden lg:hidden"></div>
-
     <div class="container mx-auto p-2 sm:p-4 lg:p-6">
         <header class="mb-6 pb-4 border-b border-gray-300">
-            <div class="flex justify-between items-start">
-                 <div class="flex items-center space-x-4">
-                    <button id="togglePatientListBtn" class="p-2 rounded-md hover:bg-gray-200 lg:hidden">
-                        <i class="fas fa-bars fa-lg text-gray-600"></i>
-                    </button>
-                    <div>
-                        <h1 class="text-2xl sm:text-3xl font-bold text-teal-700">Gestionale Fisioterapia</h1>
-                         <div id="auth-container" class="mt-2">
-                            <button id="authorize_button" class="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow hidden">
-                                <i class="fab fa-google mr-2"></i> Accedi con Google per Sincronizzare
-                            </button>
-                            <div id="user_info" class="hidden items-center space-x-2 text-sm">
-                                <span id="user_name" class="font-semibold"></span>
-                                <button id="signout_button" class="text-red-500 hover:underline">(esci)</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div id="sync-status" class="flex items-center space-x-2 text-sm text-gray-600">
-                    <div id="sync-status-dot" class="sync-status-dot sync-offline"></div>
-                    <span id="sync-status-text">Offline</span>
-                </div>
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                   <button id="togglePatientListBtn" class="p-2 rounded-md hover:bg-gray-200 lg:hidden">
+                       <i class="fas fa-bars fa-lg text-gray-600"></i>
+                   </button>
+                   <h1 class="text-2xl sm:text-3xl font-bold text-teal-700">Gestionale Fisioterapia</h1>
+               </div>
+                <div class="text-sm text-gray-500">Dati salvati su questo dispositivo</div>
             </div>
         </header>
 
         <div class="relative flex lg:space-x-6">
-            <!-- Patient Sidebar -->
             <div id="patientSidebar" class="fixed top-0 left-0 h-full w-4/5 max-w-sm bg-gray-50 z-40 transform -translate-x-full transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:w-1/3 xl:w-1/4">
                  <div class="bg-white p-4 rounded-lg shadow-md self-start h-full flex flex-col">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-xl font-bold text-gray-700">Pazienti</h2>
-                        <button id="addPatientBtn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center">
-                            <i class="fas fa-plus mr-2"></i> Nuovo
-                        </button>
+                        <button id="addPatientBtn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg"><i class="fas fa-plus mr-2"></i> Nuovo</button>
                     </div>
                     <div id="patientList" class="space-y-2 overflow-y-auto flex-grow custom-scrollbar"></div>
                 </div>
             </div>
-
-            <!-- Main Content: Calendar -->
             <div class="w-full main-content">
                 <div class="bg-white p-3 sm:p-6 rounded-lg shadow-md">
                     <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-4 space-y-4 sm:space-y-0">
@@ -128,9 +72,7 @@
                             <h2 id="weekRange" class="text-base sm:text-xl font-bold text-gray-700 text-center w-40 sm:w-64"></h2>
                             <button id="nextWeekBtn" class="p-2 rounded-md hover:bg-gray-200"><i class="fas fa-chevron-right"></i></button>
                             <button id="todayBtn" class="ml-2 sm:ml-4 px-3 py-2 text-sm bg-gray-200 hover:bg-gray-300 rounded-md">Oggi</button>
-                            <button id="printWeekBtn" class="ml-2 px-3 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-md flex items-center">
-                                <i class="fas fa-print mr-2"></i> Stampa
-                            </button>
+                            <button id="printWeekBtn" class="ml-2 px-3 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-md flex items-center"><i class="fas fa-print mr-2"></i> Stampa</button>
                         </div>
                         <div id="weeklyTotal" class="text-right bg-green-50 p-2 rounded-md">
                             <p class="text-sm text-gray-500">Guadagno Settimana</p>
@@ -148,142 +90,19 @@
         </div>
     </div>
     
-    <div id="patientModal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop">
-        <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md m-4 overflow-y-auto max-h-[90vh]">
-            <div class="flex justify-between items-center mb-6">
-                <h2 id="patientModalTitle" class="text-2xl font-bold"></h2>
-                <button type="button" id="deletePatientBtn" class="text-red-500 hover:text-red-700 hidden" title="Elimina Paziente">
-                    <i class="fas fa-trash-alt fa-lg"></i>
-                </button>
-            </div>
-            <form id="patientForm">
-                <input type="hidden" id="patientId">
-                <div class="space-y-4">
-                    <input id="patientName" type="text" placeholder="Nome" class="w-full px-4 py-2 border rounded-lg" required>
-                    <input id="patientSurname" type="text" placeholder="Cognome" class="w-full px-4 py-2 border rounded-lg" required>
-                    <input id="patientPhone" type="tel" placeholder="Telefono" class="w-full px-4 py-2 border rounded-lg">
-                    <textarea id="patientAddress" placeholder="Indirizzo" rows="2" class="w-full px-4 py-2 border rounded-lg"></textarea>
-                    <div>
-                        <label for="patientDefaultPrice" class="block text-sm font-medium text-gray-700 mb-1">Prezzo Predefinito (€)</label>
-                        <input id="patientDefaultPrice" type="number" step="0.01" placeholder="Es. 50.00" class="w-full px-4 py-2 border rounded-lg">
-                    </div>
-                    <textarea id="patientNotes" placeholder="Note cliniche..." rows="3" class="w-full px-4 py-2 border rounded-lg"></textarea>
-                </div>
-                <div class="flex flex-wrap justify-end mt-6 gap-3">
-                    <button type="button" id="addAppointmentFromPatientBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg hidden"><i class="fas fa-calendar-plus mr-2"></i>Crea App.</button>
-                    <button type="button" id="cancelPatientBtn" class="bg-gray-300 hover:bg-gray-400 font-bold py-2 px-4 rounded-lg">Annulla</button>
-                    <button type="submit" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg">Salva</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="appointmentModal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop">
-        <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-lg m-4 overflow-y-auto max-h-[90vh]">
-            <h2 id="appointmentModalTitle" class="text-2xl font-bold mb-4"></h2>
-            <div id="conflictError" class="hidden bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert">
-              <p class="font-bold">Conflitto Rilevato</p><p>L'orario si sovrappone con un altro appuntamento.</p>
-            </div>
-            <form id="appointmentForm">
-                <input type="hidden" id="appointmentId"><input type="hidden" id="originalAppointmentData">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="appointmentPatient" class="block text-sm font-medium text-gray-700">Paziente</label>
-                        <select id="appointmentPatient" class="w-full mt-1 px-4 py-2 border rounded-lg" required></select>
-                    </div>
-                    <div>
-                        <label for="appointmentPrice" class="block text-sm font-medium text-gray-700">Prezzo (€)</label>
-                        <input id="appointmentPrice" type="number" step="0.01" placeholder="Es. 50.00" class="w-full mt-1 px-4 py-2 border rounded-lg" required>
-                    </div>
-                    <div>
-                        <label for="appointmentDate" class="block text-sm font-medium text-gray-700">Data</label>
-                        <input id="appointmentDate" type="date" class="w-full mt-1 px-4 py-2 border rounded-lg" required>
-                    </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                             <label for="appointmentTime" class="block text-sm font-medium text-gray-700">Orario</label>
-                            <input id="appointmentTime" type="time" step="900" class="w-full mt-1 px-4 py-2 border rounded-lg" required>
-                        </div>
-                        <div>
-                            <label for="appointmentDuration" class="block text-sm font-medium text-gray-700">Durata (min)</label>
-                            <input id="appointmentDuration" type="number" min="15" step="15" value="60" class="w-full mt-1 px-4 py-2 border rounded-lg" required>
-                        </div>
-                    </div>
-                </div>
-                <div class="mt-4"><textarea id="appointmentNotes" placeholder="Note sulla seduta..." rows="2" class="w-full px-4 py-2 border rounded-lg"></textarea></div>
-                <div class="mt-4 p-3 bg-gray-50 rounded-lg">
-                    <label class="flex items-center space-x-3 cursor-pointer">
-                        <input type="checkbox" id="isRecurring" class="h-5 w-5 rounded text-teal-600 focus:ring-teal-500"><span class="font-medium">Appuntamento Ricorrente</span>
-                    </label>
-                    <div id="recurringOptions" class="hidden mt-3 space-y-3">
-                        <div class="flex items-center space-x-2 sm:space-x-4"><label class="text-sm">Ripeti:</label>
-                            <div id="weekdays" class="flex flex-wrap gap-1">
-                                <label class="p-2 border rounded-full text-xs cursor-pointer"><input type="checkbox" data-day="1" class="hidden"> L</label><label class="p-2 border rounded-full text-xs cursor-pointer"><input type="checkbox" data-day="2" class="hidden"> M</label><label class="p-2 border rounded-full text-xs cursor-pointer"><input type="checkbox" data-day="3" class="hidden"> M</label><label class="p-2 border rounded-full text-xs cursor-pointer"><input type="checkbox" data-day="4" class="hidden"> G</label><label class="p-2 border rounded-full text-xs cursor-pointer"><input type="checkbox" data-day="5" class="hidden"> V</label><label class="p-2 border rounded-full text-xs cursor-pointer"><input type="checkbox" data-day="6" class="hidden"> S</label><label class="p-2 border rounded-full text-xs cursor-pointer"><input type="checkbox" data-day="0" class="hidden"> D</label>
-                            </div>
-                        </div>
-                        <div><label for="recurringWeeks" class="text-sm">Per <input id="recurringWeeks" type="number" min="1" value="12" class="w-16 mx-1 text-center border rounded-md"> settimane</label></div>
-                    </div>
-                </div>
-                <div class="flex flex-wrap justify-end mt-6 gap-3">
-                    <button type="button" id="cancelAppointmentBtn" class="bg-gray-300 hover:bg-gray-400 font-bold py-2 px-4 rounded-lg">Annulla</button>
-                    <button type="button" id="deleteAppointmentBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg hidden">Elimina</button>
-                    <button type="submit" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg">Salva</button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <div id="patientModal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop"><div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md m-4 overflow-y-auto max-h-[90vh]"><div class="flex justify-between items-center mb-6"><h2 id="patientModalTitle" class="text-2xl font-bold"></h2><button type="button" id="deletePatientBtn" class="text-red-500 hover:text-red-700 hidden" title="Elimina Paziente"><i class="fas fa-trash-alt fa-lg"></i></button></div><form id="patientForm"><input type="hidden" id="patientId"><div class="space-y-4"><input id="patientName" type="text" placeholder="Nome" class="w-full px-4 py-2 border rounded-lg" required><input id="patientSurname" type="text" placeholder="Cognome" class="w-full px-4 py-2 border rounded-lg" required><input id="patientPhone" type="tel" placeholder="Telefono" class="w-full px-4 py-2 border rounded-lg"><textarea id="patientAddress" placeholder="Indirizzo" rows="2" class="w-full px-4 py-2 border rounded-lg"></textarea><div><label for="patientDefaultPrice" class="block text-sm font-medium text-gray-700 mb-1">Prezzo Predefinito (€)</label><input id="patientDefaultPrice" type="number" step="0.01" placeholder="Es. 50.00" class="w-full px-4 py-2 border rounded-lg"></div><textarea id="patientNotes" placeholder="Note cliniche..." rows="3" class="w-full px-4 py-2 border rounded-lg"></textarea></div><div class="flex flex-wrap justify-end mt-6 gap-3"><button type="button" id="addAppointmentFromPatientBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg hidden"><i class="fas fa-calendar-plus mr-2"></i>Crea App.</button><button type="button" id="cancelPatientBtn" class="bg-gray-300 hover:bg-gray-400 font-bold py-2 px-4 rounded-lg">Annulla</button><button type="submit" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg">Salva</button></div></form></div></div>
+    <div id="appointmentModal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop"><div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-lg m-4 overflow-y-auto max-h-[90vh]"><h2 id="appointmentModalTitle" class="text-2xl font-bold mb-4"></h2><div id="conflictError" class="hidden bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert"><p class="font-bold">Conflitto Rilevato</p><p>L'orario si sovrappone con un altro appuntamento.</p></div><form id="appointmentForm"><input type="hidden" id="appointmentId"><input type="hidden" id="originalAppointmentData"><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label for="appointmentPatient" class="block text-sm font-medium text-gray-700">Paziente</label><select id="appointmentPatient" class="w-full mt-1 px-4 py-2 border rounded-lg" required></select></div><div><label for="appointmentPrice" class="block text-sm font-medium text-gray-700">Prezzo (€)</label><input id="appointmentPrice" type="number" step="0.01" placeholder="Es. 50.00" class="w-full mt-1 px-4 py-2 border rounded-lg" required></div><div><label for="appointmentDate" class="block text-sm font-medium text-gray-700">Data</label><input id="appointmentDate" type="date" class="w-full mt-1 px-4 py-2 border rounded-lg" required></div><div class="grid grid-cols-2 gap-2"><div><label for="appointmentTime" class="block text-sm font-medium text-gray-700">Orario</label><input id="appointmentTime" type="time" step="900" class="w-full mt-1 px-4 py-2 border rounded-lg" required></div><div><label for="appointmentDuration" class="block text-sm font-medium text-gray-700">Durata (min)</label><input id="appointmentDuration" type="number" min="15" step="15" value="60" class="w-full mt-1 px-4 py-2 border rounded-lg" required></div></div></div><div class="mt-4"><textarea id="appointmentNotes" placeholder="Note sulla seduta..." rows="2" class="w-full px-4 py-2 border rounded-lg"></textarea></div><div class="mt-4 p-3 bg-gray-50 rounded-lg"><label class="flex items-center space-x-3 cursor-pointer"><input type="checkbox" id="isRecurring" class="h-5 w-5 rounded text-teal-600 focus:ring-teal-500"><span class="font-medium">Appuntamento Ricorrente</span></label><div id="recurringOptions" class="hidden mt-3 space-y-3"><div class="flex items-center space-x-2 sm:space-x-4"><label class="text-sm">Ripeti:</label><div id="weekdays" class="flex flex-wrap gap-1"><label class="p-2 border rounded-full text-xs cursor-pointer"><input type="checkbox" data-day="1" class="hidden"> L</label><label class="p-2 border rounded-full text-xs cursor-pointer"><input type="checkbox" data-day="2" class="hidden"> M</label><label class="p-2 border rounded-full text-xs cursor-pointer"><input type="checkbox" data-day="3" class="hidden"> M</label><label class="p-2 border rounded-full text-xs cursor-pointer"><input type="checkbox" data-day="4" class="hidden"> G</label><label class="p-2 border rounded-full text-xs cursor-pointer"><input type="checkbox" data-day="5" class="hidden"> V</label><label class="p-2 border rounded-full text-xs cursor-pointer"><input type="checkbox" data-day="6" class="hidden"> S</label><label class="p-2 border rounded-full text-xs cursor-pointer"><input type="checkbox" data-day="0" class="hidden"> D</label></div></div><div><label for="recurringEndDate" class="text-sm font-medium text-gray-700">Ripeti fino al:</label><input id="recurringEndDate" type="date" class="w-full mt-1 px-4 py-2 border rounded-lg"></div></div></div><div class="flex flex-wrap justify-end mt-6 gap-3"><button type="button" id="cancelAppointmentBtn" class="bg-gray-300 hover:bg-gray-400 font-bold py-2 px-4 rounded-lg">Annulla</button><button type="button" id="deleteAppointmentBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg hidden">Elimina</button><button type="submit" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg">Salva</button></div></form></div></div>
+    <div id="confirmActionModal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop"><div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md m-4 text-center"><h2 id="confirmActionTitle" class="text-xl font-bold mb-4"></h2><p id="confirmActionMessage" class="mb-6"></p><div class="flex justify-end space-x-4"><button id="confirmActionCancel" class="bg-gray-300 hover:bg-gray-400 font-bold py-2 px-4 rounded-lg">Annulla</button><button id="confirmActionOk" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">Conferma</button></div></div></div>
+    <div id="confirmRecurrenceModal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop"><div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md m-4 text-center"><h2 id="confirmRecurrenceTitle" class="text-xl font-bold mb-4"></h2><p id="confirmRecurrenceMessage" class="mb-6"></p><div class="flex flex-col space-y-3"><button id="confirmRecurrenceSingle" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg"></button><button id="confirmRecurrenceAll" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 px-4 rounded-lg"></button><button id="confirmRecurrenceCancel" class="w-full mt-4 bg-gray-300 hover:bg-gray-400 font-bold py-3 px-4 rounded-lg">Annulla</button></div></div></div>
     
-    <div id="confirmActionModal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop">
-        <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md m-4 text-center">
-            <h2 id="confirmActionTitle" class="text-xl font-bold mb-4"></h2><p id="confirmActionMessage" class="mb-6"></p>
-            <div class="flex justify-end space-x-4">
-                <button id="confirmActionCancel" class="bg-gray-300 hover:bg-gray-400 font-bold py-2 px-4 rounded-lg">Annulla</button>
-                <button id="confirmActionOk" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">Conferma</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="confirmRecurrenceModal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop">
-        <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md m-4 text-center">
-            <h2 id="confirmRecurrenceTitle" class="text-xl font-bold mb-4"></h2><p id="confirmRecurrenceMessage" class="mb-6"></p>
-            <div class="flex flex-col space-y-3">
-                <button id="confirmRecurrenceSingle" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg"></button>
-                <button id="confirmRecurrenceAll" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 px-4 rounded-lg"></button>
-                <button id="confirmRecurrenceCancel" class="w-full mt-4 bg-gray-300 hover:bg-gray-400 font-bold py-3 px-4 rounded-lg">Annulla</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://apis.google.com/js/api.js"></script>
-
     <script type="module">
-        // #############################################################################
-        // ### CONFIGURAZIONE - INCOLLA QUI LE TUE CHIAVI                           ###
-        // #############################################################################
-        const API_KEY = 'AIzaSyDzAzRi-MVwCX8e1-a4b-ag9KfZdZsBfWI'; // Esempio: AIzaSyDzAzRi-MVwCX8e1-a4b-ag9KfZdZsBfWI
-        const CLIENT_ID = '999092828800-342l4shrm85f00bdigvn8q78rkufh7fh.apps.googleusercontent.com'; // Esempio: 999092828800-342l4shrm85f00bdigvn8q78rkufh7fh.apps.googleusercontent.com
-        // #############################################################################
-
-        const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
-        const SCOPES = 'https://www.googleapis.com/auth/drive.file';
-        const DRIVE_FILENAME = 'gestionale-fisioterapia-data.json';
-        const LOCAL_STORAGE_KEY = 'fisioterapia-gestionale-data-local';
-
-        let tokenClient;
-        let driveFileId = null;
-        let state = { lastModified: 0, patients: [], appointments: [] };
+        const LOCAL_STORAGE_KEY = 'fisioterapia-gestionale-data';
+        let state = { patients: [], appointments: [] };
         let currentWeekStartDate = getMonday(new Date());
-
         let ui;
 
         document.addEventListener('DOMContentLoaded', () => {
             ui = {
-                authorizeButton: document.getElementById('authorize_button'),
-                signoutButton: document.getElementById('signout_button'),
-                userInfoDiv: document.getElementById('user_info'),
-                userNameSpan: document.getElementById('user_name'),
-                syncStatusDot: document.getElementById('sync-status-dot'),
-                syncStatusText: document.getElementById('sync-status-text'),
                 patientListEl: document.getElementById('patientList'),
                 calendarHead: document.getElementById('calendarHead'),
                 calendarBody: document.getElementById('calendarBody'),
@@ -319,42 +138,24 @@
                 sidebarBackdrop: document.getElementById('sidebarBackdrop'),
                 recurringOptions: document.getElementById('recurringOptions'),
                 isRecurringCheckbox: document.getElementById('isRecurring'),
-                recurringWeeksInput: document.getElementById('recurringWeeks'),
-                weekRange: document.getElementById('weekRange')
+                recurringEndDateInput: document.getElementById('recurringEndDate'),
+                weekRange: document.getElementById('weekRange'),
+                weeklyTotal: document.getElementById('weeklyTotal')
             };
-
             loadStateFromLocal();
             refreshUI();
-            
-            gapi.load('client', initializeGapiClient);
-            const script = document.createElement('script');
-            script.src = 'https://accounts.google.com/gsi/client';
-            script.async = true;
-            script.defer = true;
-            script.onload = initializeGis;
-            document.body.appendChild(script);
-
             setupEventListeners();
         });
-        
-        // --- AUTH & SYNC ---
-        async function initializeGapiClient() { await gapi.client.init({ apiKey: API_KEY, discoveryDocs: DISCOVERY_DOCS }); }
-        function initializeGis() { tokenClient = google.accounts.oauth2.initTokenClient({ client_id: CLIENT_ID, scope: SCOPES, callback: handleTokenResponse, error_callback: handleGisError, }); tokenClient.requestAccessToken({prompt: 'none'}); }
-        async function handleTokenResponse(resp) { if (resp.error) { return; } gapi.client.setToken(resp); updateSigninStatus(true); await syncWithDrive(); }
-        function handleGisError(error) { console.log('Silent login failed.', error); updateSigninStatus(false); }
-        function handleAuthClick() { if (tokenClient) { if (gapi.client.getToken() === null) { tokenClient.requestAccessToken({prompt: 'consent'}); } else { tokenClient.requestAccessToken({prompt: ''}); } } }
-        function handleSignoutClick() { const token = gapi.client.getToken(); if (token !== null) { google.accounts.oauth2.revoke(token.access_token, () => { gapi.client.setToken(null); updateSigninStatus(false); }); } }
-        function updateSigninStatus(isSignedIn) { ui.authorizeButton.classList.toggle('hidden', isSignedIn); ui.userInfoDiv.classList.toggle('hidden', !isSignedIn); if (isSignedIn) { gapi.client.request({ path: 'https://www.googleapis.com/oauth2/v1/userinfo' }).then(response => { ui.userNameSpan.textContent = `Ciao, ${response.result.given_name}`; }); } else { ui.userNameSpan.textContent = ''; driveFileId = null; updateSyncStatus('offline'); } }
-        async function findOrCreateDriveFile() { const response = await gapi.client.drive.files.list({ q: `name='${DRIVE_FILENAME}' and trashed=false`, spaces: 'drive', fields: 'files(id, name)', }); if (response.result.files.length > 0) { return response.result.files[0].id; } const createResponse = await gapi.client.drive.files.create({ resource: { name: DRIVE_FILENAME, appProperties: {isPhysioApp: 'true'}, parents: ['root'] }, fields: 'id', }); return createResponse.result.id; }
-        async function loadFromDrive(fileId) { try { const response = await gapi.client.drive.files.get({ fileId, alt: 'media' }); return response.result; } catch (e) { console.error("Error loading from Drive:", e); return null; } }
-        async function saveToDrive(fileId, content) { updateSyncStatus('online'); const boundary = '-------314159265358979323846'; const multipartRequestBody = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({ name: DRIVE_FILENAME, mimeType: 'application/json' })}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(content)}\r\n--${boundary}--`; try { await gapi.client.request({ path: `/upload/drive/v3/files/${fileId}`, method: 'PATCH', params: { uploadType: 'multipart' }, headers: { 'Content-Type': `multipart/related; boundary="${boundary}"` }, body: multipartRequestBody }); updateSyncStatus('synced'); } catch (error) { console.error("Error saving to Drive:", error); updateSyncStatus('offline'); } }
-        async function syncWithDrive() { if (!gapi.client.getToken()) return; updateSyncStatus('online'); if (!driveFileId) driveFileId = await findOrCreateDriveFile(); const driveData = await loadFromDrive(driveFileId); const localData = getStateFromLocal(); if (driveData && (!localData || driveData.lastModified > localData.lastModified)) { state = driveData; } saveState(); refreshUI(); }
-        function updateSyncStatus(status) { ui.syncStatusDot.className = 'sync-status-dot'; const statuses = { offline: { class: 'sync-offline', text: 'Offline' }, online: { class: 'sync-online', text: 'Sincronizzazione...' }, synced: { class: 'sync-synced', text: 'Sincronizzato' } }; ui.syncStatusDot.classList.add(statuses[status].class); ui.syncStatusText.textContent = statuses[status].text; }
-        function loadStateFromLocal() { const storedState = localStorage.getItem(LOCAL_STORAGE_KEY); if (storedState) state = JSON.parse(storedState); }
-        function getStateFromLocal() { return JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || { lastModified: 0, patients: [], appointments: [] }; }
-        function saveState() { state.lastModified = Date.now(); localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state)); if (gapi.client.getToken() && driveFileId) { saveToDrive(driveFileId, state); } }
 
-        // --- UI & CORE APP LOGIC ---
+        function loadStateFromLocal() {
+            const storedState = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (storedState) state = JSON.parse(storedState);
+        }
+
+        function saveState() {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
+        }
+        
         function refreshUI() {
             renderPatientList();
             renderCalendar();
@@ -498,7 +299,7 @@
             
         function calculateWeeklyTotal(appointments) {
             const total = appointments.reduce((sum, app) => sum + (Number(app.price) || 0), 0);
-            document.getElementById('weeklyTotal').querySelector('p:last-child').textContent = `€ ${total.toFixed(2)}`;
+            ui.weeklyTotal.querySelector('p:last-child').textContent = `€ ${total.toFixed(2)}`;
         }
 
         function openAppointmentModal(appointmentOrEvent, preselectedPatient = null) {
@@ -619,27 +420,32 @@
         }
             
         async function generateRecurringAppointments(baseAppointment, ignoreId = null) {
-            const weeks = parseInt(ui.recurringWeeksInput.value);
+            const endDate = ui.recurringEndDateInput.value;
             const selectedDays = Array.from(document.querySelectorAll('#weekdays input:checked')).map(c => parseInt(c.dataset.day));
-            if (selectedDays.length === 0) { alert("Seleziona almeno un giorno per la ricorrenza."); return null; }
             
-            const startDate = new Date(baseAppointment.date + 'T00:00:00');
+            if (!endDate || selectedDays.length === 0) { 
+                alert("Seleziona i giorni e una data di fine per la ricorrenza."); 
+                return null; 
+            }
+
             const recurringId = baseAppointment.recurringId || crypto.randomUUID();
             let appointmentsToAdd = [];
-            for (let w = 0; w < weeks; w++) {
-                for (const dayIndex of selectedDays) {
-                    const mondayOfWeek = getMonday(addDays(startDate, w * 7));
-                    const offset = dayIndex === 0 ? 6 : dayIndex - 1;
-                    const dateForThisInstance = addDays(mondayOfWeek, offset);
-                    
-                    const newApp = { ...baseAppointment, date: formatDate(dateForThisInstance), recurringId, id: crypto.randomUUID() };
-                    appointmentsToAdd.push(newApp);
-                }
+            let currentDate = new Date(baseAppointment.date + 'T00:00:00');
+            const finalDate = new Date(endDate + 'T00:00:00');
+            
+            while(currentDate <= finalDate) {
+                 if (selectedDays.includes(currentDate.getDay())) {
+                     const newApp = { ...baseAppointment, date: formatDate(currentDate), recurringId, id: crypto.randomUUID() };
+                     appointmentsToAdd.push(newApp);
+                 }
+                 currentDate.setDate(currentDate.getDate() + 1);
             }
+            
             for (const app of appointmentsToAdd) {
                 if (await checkConflict(app, ignoreId)) {
                     ui.conflictError.classList.remove('hidden');
-                    alert(`Conflitto: ${app.date} ${app.time}.`); return null;
+                    alert(`Conflitto rilevato durante la creazione della serie: ${app.date} ${app.time}.`); 
+                    return null;
                 }
             }
             return appointmentsToAdd;
@@ -690,7 +496,7 @@
             state.appointments = state.appointments.filter(a => a.recurringId !== originalData.recurringId || a.date < originalData.date);
         }
 
-        async function checkConflict(appData, ignoreId = null, appointmentList = state.appointments) {
+        function checkConflict(appData, ignoreId = null, appointmentList = state.appointments) {
             const duration = parseInt(appData.duration) || 60;
             const [startH, startM] = appData.time.split(':').map(Number);
             const startTime = startH * 60 + startM;
@@ -735,9 +541,7 @@
             );
 
             if (confirmed) {
-                // Remove patient
                 state.patients = state.patients.filter(p => p.id !== patientId);
-                // Remove all appointments for that patient
                 state.appointments = state.appointments.filter(app => app.patientId !== patientId);
                 
                 saveState();
@@ -745,7 +549,6 @@
                 closePatientModal();
             }
         }
-
 
         function showRecurrenceConfirmModal(action) {
             const msgEl = document.getElementById('confirmRecurrenceMessage');
@@ -770,8 +573,6 @@
         }
 
         function setupEventListeners() {
-            ui.authorizeButton.onclick = handleAuthClick;
-            ui.signoutButton.onclick = handleSignoutClick;
             document.getElementById('addPatientBtn').onclick = () => openPatientModal();
             document.getElementById('cancelPatientBtn').onclick = closePatientModal;
             document.getElementById('cancelAppointmentBtn').onclick = closeAppointmentModal;
