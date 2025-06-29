@@ -353,7 +353,7 @@
                 price: ui.appointmentPriceInput.value,
                 notes: ui.appointmentNotesInput.value.trim(),
                 date: ui.appointmentDateInput.value,
-                time: ui.appointmentTimeInput.value,
+                time: ui.appointmentTimeInput.value.substring(0, 5),
                 duration: ui.appointmentDurationInput.value || '60',
             };
             if (!patientId || !appointmentData.price || !appointmentData.date || !appointmentData.time) {
@@ -445,8 +445,9 @@
             }
             
             for (const app of appointmentsToAdd) {
-                if (await checkConflict(app, ignoreId)) {
-                    showConflictModal(await checkConflict(app, ignoreId), app);
+                const conflictingApp = await checkConflict(app, ignoreId);
+                if (conflictingApp) {
+                    showConflictModal(conflictingApp, app);
                     return null;
                 }
             }
@@ -460,14 +461,12 @@
                 
             const otherAppointments = state.appointments.filter(a => a.recurringId !== originalData.recurringId || a.date < originalData.date);
             
-            const originalDate = new Date(originalData.date);
-            const newDate = new Date(newData.date);
-            const utc1 = Date.UTC(originalDate.getFullYear(), originalDate.getMonth(), originalDate.getDate());
-            const utc2 = Date.UTC(newDate.getFullYear(), newDate.getMonth(), newDate.getDate());
-            const dayDifference = Math.floor((utc2 - utc1) / (1000 * 60 * 60 * 24));
+            const originalDate = new Date(originalData.date + 'T00:00:00');
+            const newDate = new Date(newData.date + 'T00:00:00');
+            const dayDifference = (newDate.getTime() - originalDate.getTime()) / (1000 * 60 * 60 * 24);
 
             const updatedFutureAppointments = futureAppointments.map(appToUpdate => {
-                const currentInstanceDate = new Date(appToUpdate.date);
+                const currentInstanceDate = new Date(appToUpdate.date + 'T00:00:00');
                 const newDateForThisInstance = addDays(currentInstanceDate, dayDifference);
                 
                 return { 
@@ -484,8 +483,9 @@
 
             for(const app of updatedFutureAppointments) {
                 const otherAppsForCheck = [...otherAppointments, ...updatedFutureAppointments.filter(a => a.id !== app.id)];
-                if (await checkConflict(app, app.id, otherAppsForCheck)) {
-                    showConflictModal(await checkConflict(app, app.id, otherAppsForCheck), app);
+                const conflictingApp = await checkConflict(app, app.id, otherAppsForCheck);
+                if (conflictingApp) {
+                    showConflictModal(conflictingApp, app);
                     return false;
                 }
             }
@@ -523,12 +523,13 @@
             const cancelBtn = document.getElementById('conflictCancelBtn');
 
             deleteAndSaveBtn.onclick = () => {
-                // Delete conflicting appointment
                 state.appointments = state.appointments.filter(a => a.id !== conflictingApp.id);
-                // Add new appointment
-                newAppData.id = newAppData.id || crypto.randomUUID();
-                state.appointments.push(newAppData);
-                
+                if (newAppData.id && state.appointments.find(a => a.id === newAppData.id)) {
+                   state.appointments = state.appointments.map(a => a.id === newAppData.id ? newAppData : a);
+                } else {
+                   newAppData.id = newAppData.id || crypto.randomUUID();
+                   state.appointments.push(newAppData);
+                }
                 saveState();
                 refreshUI();
                 closeAppointmentModal();
