@@ -178,6 +178,10 @@
             if (format === 'DD/MM') return `${day}/${month}`;
             return d.toLocaleDateString('it-IT');
         }
+        function formatTimeForStorage(timeString) {
+            if (!timeString) return '';
+            return timeString.substring(0, 5); // Assicura sempre il formato HH:mm
+        }
 
         const PATIENT_COLORS = ['#a7f3d0', '#bae6fd', '#fbcfe8', '#fef08a', '#c7d2fe', '#d9f99d', '#fed7aa', '#e9d5ff', '#a5f3fc', '#fecaca', '#bbf7d0', '#bfdbfe', '#f5d0fe', '#fde68a', '#d1d5db', '#fde047'];
         function getPatientColor(patientId) {
@@ -353,7 +357,7 @@
                 price: ui.appointmentPriceInput.value,
                 notes: ui.appointmentNotesInput.value.trim(),
                 date: ui.appointmentDateInput.value,
-                time: ui.appointmentTimeInput.value.substring(0, 5),
+                time: formatTimeForStorage(ui.appointmentTimeInput.value),
                 duration: ui.appointmentDurationInput.value || '60',
             };
             if (!patientId || !appointmentData.price || !appointmentData.date || !appointmentData.time) {
